@@ -68,6 +68,8 @@ Open the site, log in, place a figurine on the box: within a minute it appears i
 with its cover if the community catalog knows it, or with a "give it a name" banner.
 
 Details, configuration keys and the coin/travel/language workflows: [docs/SETUP.md](docs/SETUP.md).
+What the app does, feature by feature, in four languages: [docs/GUIDE.md](docs/GUIDE.md) (the same
+text is available inside the app under Menu → Guide).
 
 ## Repository layout
 
@@ -78,7 +80,8 @@ Details, configuration keys and the coin/travel/language workflows: [docs/SETUP.
 | `sync/tc_pin.sh`, `tc_fetch.sh`, `tc_rip_lang.sh`, `taf_ids.py`, `import_taf.sh` | helpers: pin a record to a TAF, pull the current cloud version of a figurine, rip another language version, print a tonies‑json id block, import a TAF |
 | `android/` | Android app (WebView + native NFC + background player + self‑update) |
 | `scripts/publish_apk.ps1` | build, sign, publish the APK to your server |
-| `docs/` | setup guide, teddycloud macvlan example |
+| `docs/` | setup guide, user guide (generated from the in-app guide), teddycloud macvlan example |
+| `scripts/gen_guide_md.js` | regenerates `docs/GUIDE.md` from `server/static/guide.js` |
 
 ## Honest notes
 
