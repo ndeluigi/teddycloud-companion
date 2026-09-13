@@ -1,0 +1,29 @@
+# deployment data (never commit)
+.env
+library.json
+media/
+state/
+apps/
+versions.json
+coins.json
+*.log
+*.err
+
+# server
+server/.venv/
+server/media/*
+!server/media/.gitkeep
+__pycache__/
+*.pyc
+
+# android
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/.idea/
+android/.kotlin/
+*.iml
+android/captures/
+android/keystore/
+android/companion.properties

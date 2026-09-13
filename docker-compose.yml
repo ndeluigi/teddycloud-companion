@@ -1,0 +1,24 @@
+# teddycloud companion — the phone-facing server.
+# It must be able to reach teddycloud's web port (TEDDYCLOUD_URL) for uploads: put both
+# containers on the same docker network, or point TEDDYCLOUD_URL at the host's published port.
+services:
+  companion:
+    build: ./server
+    container_name: ${COMPANION_CONTAINER:-companion}
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "${COMPANION_PORT:-8080}:8080"
+    volumes:
+      - ./library.json:/app/library.json
+      - ./media:/app/media
+      - ./state:/app/state:ro
+      - ./apps:/app/apps:ro
+    networks:
+      - companion_net
+
+networks:
+  companion_net:
+    # `external: true` + the name of the network teddycloud is on, if you want to reach it by
+    # container name (TEDDYCLOUD_URL=http://teddycloud:80)
+    name: ${COMPANION_NETWORK:-companion_net}

@@ -1,0 +1,7 @@
+# Copy to companion.properties (gitignored) and fill in your deployment.
+site=https://storie.example.com
+applicationId=com.example.storie
+appName=Storie
+# used by scripts/publish_apk.ps1 (ssh target + directory the server serves /storie.apk from)
+deployHost=user@your-teddycloud-host
+deployDir=/home/user/teddycloud-companion/apps

@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e7c86">
+<link rel="manifest" href="/manifest.webmanifest?v=3">
+<link rel="icon" href="/static/icon-192.png?v=3">
+<link rel="apple-touch-icon" href="/static/icon-192.png?v=3">
+<title>Storie</title>
+<style>
+  /* Edge-to-edge phones draw the page under the status bar and the navigation buttons. Every inset
+     flows through these four variables: browsers fill them from env(safe-area-inset-*), the Android
+     app measures the window insets and sets the same variables inline (see MainActivity). */
+  :root { --safetop:env(safe-area-inset-top); --safebot:env(safe-area-inset-bottom);
+          --safeleft:env(safe-area-inset-left); --saferight:env(safe-area-inset-right); }
+  :root { --teal:#0e7c86; --teal-d:#0a5f67; --bg:#f4f6f7; --card:#ffffff; --ink:#14202a; --muted:#6b7a82;
+          --line:#d9e0e2; --accent:#ffb703; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body { height:100%; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;
+         background:var(--bg); color:var(--ink); }
+  button { font:inherit; cursor:pointer; }
+  header { position:sticky; top:0; z-index:5; background:var(--teal); color:#fff;
+           padding:calc(12px + var(--safetop)) calc(14px + var(--saferight)) 12px calc(14px + var(--safeleft)); display:flex; align-items:center; gap:10px; }
+  header h1 { font-size:22px; margin:0; font-weight:800; letter-spacing:.3px; flex:1; }
+  .iconbtn { border:0; background:rgba(255,255,255,.16); color:#fff; width:42px; height:42px; border-radius:12px;
+             font-size:22px; line-height:1; display:grid; place-items:center; }
+  .iconbtn:active { background:rgba(255,255,255,.3); }
+  main { padding:16px 16px calc(84px + var(--safebot)); max-width:640px; margin:0 auto; }
+  /* --- bottom tab bar --- */
+  .tabbar { position:fixed; left:0; right:0; bottom:0; z-index:25; display:flex; background:var(--card);
+            border-top:1px solid var(--line); padding:6px 4px calc(6px + var(--safebot));
+            box-shadow:0 -4px 16px rgba(0,0,0,.06); }
+  .tabbar button { flex:1; border:0; background:none; color:var(--muted); font-size:11px; font-weight:700;
+                   display:flex; flex-direction:column; align-items:center; gap:2px; padding:4px 0; border-radius:12px; }
+  .tabbar button span { font-size:22px; line-height:1; }
+  .tabbar button.on { color:var(--teal); background:#e6f2f3; }
+  @media (min-width: 700px) { .tabbar { display:none; } main { padding-bottom:24px; } }
+
+  /* --- NFC call to action --- */
+  .tap { width:100%; border:0; border-radius:18px; background:var(--teal); color:#fff; padding:18px 16px;
+         font-size:18px; font-weight:800; box-shadow:0 6px 18px rgba(14,124,134,.28);
+         display:flex; align-items:center; justify-content:center; gap:12px; }
+  .tap .ico { font-size:28px; }
+  .tap:active { background:var(--teal-d); }
+  .tap.listening { background:#fff; color:var(--teal); border:2px solid var(--teal); box-shadow:none; }
+  .tap.listening .ico { animation:pulse 1.4s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.18)} }
+  .status { color:var(--muted); font-size:14px; min-height:20px; margin:10px 2px 6px; text-align:center; }
+
+  /* --- now playing --- */
+  .now { display:none; background:var(--card); border-radius:22px; padding:18px; margin:14px 0 6px;
+         box-shadow:0 4px 18px rgba(0,0,0,.08); }
+  .now.show { display:block; }
+  .now .art { width:min(60vw,240px); aspect-ratio:1; margin:0 auto 12px; border-radius:20px; overflow:hidden;
+              background:#e7edee; display:grid; place-items:center; font-size:64px; }
+  .now .art img { width:100%; height:100%; object-fit:cover; display:block; }
+  .now .title { font-size:20px; font-weight:800; text-align:center; line-height:1.25; }
+  .seek { width:100%; margin:14px 0 2px; accent-color:var(--teal); }
+  .times { display:flex; justify-content:space-between; font-size:12px; color:var(--muted); }
+  .controls { display:flex; align-items:center; justify-content:center; gap:22px; margin-top:8px; }
+  .ctl { border:0; background:#eef3f4; color:var(--ink); width:56px; height:56px; border-radius:50%; font-size:15px; font-weight:700; }
+  .ctl.big { width:78px; height:78px; background:var(--teal); color:#fff; font-size:34px; box-shadow:0 6px 16px rgba(14,124,134,.3); }
+  .ctl:active { transform:scale(.95); }
+  audio { display:none; }
+
+  /* --- story tiles --- */
+  h2 { font-size:15px; text-transform:uppercase; letter-spacing:.7px; color:var(--muted); margin:24px 0 12px; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:14px; }
+  .fig { background:var(--card); border:0; border-radius:18px; padding:10px; text-align:center;
+         box-shadow:0 2px 10px rgba(0,0,0,.06); color:var(--ink); }
+  .fig .art { width:100%; aspect-ratio:1; border-radius:14px; overflow:hidden; background:#e7edee;
+              display:grid; place-items:center; font-size:48px; color:#fff; font-weight:800; }
+  .fig .art img { width:100%; height:100%; object-fit:cover; display:block; }
+  .fig span { display:block; font-size:15px; font-weight:700; margin-top:9px; line-height:1.25;
+              overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+  .fig.playing { outline:3px solid var(--accent); }
+  .fig:active { transform:scale(.97); }
+  .empty { color:var(--muted); font-size:15px; text-align:center; padding:24px 8px; }
+
+  /* --- menu sheet --- */
+  .overlay { position:fixed; inset:0; background:rgba(20,32,42,.45); opacity:0; pointer-events:none; transition:opacity .2s; z-index:20; }
+  .overlay.show { opacity:1; pointer-events:auto; }
+  .sheet { position:fixed; top:0; right:0; bottom:0; width:min(92vw,420px); background:var(--bg); z-index:21;
+           transform:translateX(105%); transition:transform .22s ease; display:flex; flex-direction:column;
+           box-shadow:-8px 0 30px rgba(0,0,0,.2); }
+  .sheet.show { transform:none; }
+  @media (max-width: 699px) {
+    .sheet { width:100vw; box-shadow:none; }
+    .sheet .body { padding-bottom:calc(90px + var(--safebot)); }
+    #menuBtn { display:none; }
+  }
+  .sheet header { position:static; }
+  .sheet header h1 { font-size:18px; }
+  .sheet .body { overflow:auto; padding:14px 14px calc(20px + var(--safebot)); flex:1; }
+  .menu { display:grid; gap:10px; }
+  .menu button, .menu a { display:flex; align-items:center; gap:14px; width:100%; text-align:left; text-decoration:none;
+                          background:var(--card); border:0; border-radius:14px; padding:15px 16px; font-size:16px;
+                          font-weight:600; color:var(--ink); box-shadow:0 2px 8px rgba(0,0,0,.05); }
+  .menu .ico { font-size:22px; width:28px; text-align:center; }
+  .menu small { display:block; font-weight:400; color:var(--muted); font-size:13px; margin-top:2px; }
+  .panel { display:none; }
+  .panel.show { display:block; }
+  form { display:grid; gap:12px; }
+  label { font-size:13px; color:var(--muted); display:block; margin-bottom:4px; }
+  input[type=text], input[type=file] { width:100%; padding:11px; border:1px solid var(--line); border-radius:12px; background:#fff; font:inherit; }
+  .primary { border:0; border-radius:12px; background:var(--teal); color:#fff; padding:14px; font-weight:700; }
+  .ghost { border:1px solid var(--line); background:#fff; border-radius:12px; padding:12px; }
+  .hint { font-size:12px; color:var(--muted); }
+  .card { background:var(--card); border-radius:14px; padding:14px; box-shadow:0 2px 8px rgba(0,0,0,.05); margin-bottom:12px; }
+  .card .row { display:flex; gap:12px; align-items:center; }
+  .card .thumb { width:56px; height:56px; border-radius:10px; object-fit:cover; background:#e7edee; flex:none; }
+  .card .uid { font-family:ui-monospace,Menlo,monospace; font-size:12px; color:var(--muted); }
+  .steps { display:flex; gap:6px; list-style:none; padding:0; margin:0 0 14px; counter-reset:s; }
+  .steps li { flex:1; text-align:center; font-size:13px; font-weight:700; color:var(--muted); padding:8px 4px; border-radius:10px; background:#e7edee; }
+  .steps li.on { background:var(--teal); color:#fff; }
+  .steps li.done { background:#cfe8ea; color:var(--teal-d); }
+  .warn { background:#fff4d6; border:1px solid #f4d58d; border-radius:12px; padding:10px 12px; font-size:14px; margin:0 0 12px; }
+  .todo { padding-left:20px; font-size:15px; line-height:1.5; }
+  .coin { display:flex; gap:12px; align-items:center; }
+  .coin .thumb { width:56px; height:56px; border-radius:10px; overflow:hidden; background:#e7edee; flex:none; display:grid; place-items:center; }
+  .coin .thumb img, .thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+  .coin .thumb span, .thumb span { font-size:28px !important; }
+  .coin .actions { display:flex; gap:6px; flex-wrap:wrap; margin-top:8px; }
+  .coin .actions button { padding:8px 10px; font-size:13px; }
+  .badge { display:inline-block; font-size:12px; font-weight:700; padding:2px 8px; border-radius:999px; background:#e7edee; color:var(--muted); }
+  .badge.ok { background:#d8f3dc; color:#1b7f3b; } .badge.err { background:#fde2e1; color:#b02a1e; } .badge.pending { background:#fff4d6; color:#8a5a00; }
+  .boxbar { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--muted); background:var(--card); border-radius:12px; padding:8px 12px; margin:0 0 10px; box-shadow:0 2px 8px rgba(0,0,0,.05); }
+  .boxbar .dot { width:10px; height:10px; border-radius:50%; background:#aaa; flex:none; }
+  .boxbar .dot.on { background:#2ecc71; }
+  .chapters { display:flex; flex-wrap:wrap; gap:6px; justify-content:center; margin-top:12px; }
+  .chapters button { border:1px solid var(--line); background:#fff; border-radius:999px; padding:6px 11px; font-size:13px; font-weight:600; }
+  .chapters button.on { background:var(--teal); color:#fff; border-color:var(--teal); }
+  .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+  .chips button { border:1px solid var(--line); background:#fff; border-radius:999px; padding:5px 10px; font-size:12px; font-weight:600; }
+  .chips button.on { background:var(--teal); color:#fff; border-color:var(--teal); }
+  .segmented { display:flex; border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  .segmented button { flex:1; border:0; background:#fff; padding:11px 6px; font-weight:600; }
+  .segmented button.on { background:var(--teal); color:#fff; }
+  .travel { display:flex; gap:12px; align-items:center; }
+  .travel .thumb { width:48px; height:48px; border-radius:10px; overflow:hidden; background:#e7edee; flex:none; }
+  /* guest session (listen-only password): */
+  body.guest #tabbar, body.guest #menuBtn, body.guest #boxBar, body.guest #nameBanner, body.guest #sheet, body.guest #overlay { display:none !important; }
+  body.guest main { padding-bottom:calc(24px + var(--safebot)); }
+  body.guest #guestLogout { display:grid; }
+  .toast { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(24px + var(--safebot));
+           background:#14202a; color:#fff; padding:12px 18px; border-radius:12px; font-size:14px; opacity:0;
+           transition:opacity .2s; pointer-events:none; z-index:30; max-width:90vw; text-align:center; }
+  .toast.show { opacity:.95; }
+</style>
+</head>
+<body>
+<header>
+  <h1>📚 Storie</h1>
+  <button id="menuBtn" class="iconbtn" aria-label="Menu">☰</button>
+  <a id="guestLogout" class="iconbtn" href="/logout" aria-label="Esci" hidden title="Esci">🔒</a>
+</header>
+
+<main>
+  <button id="tap" class="tap"><span class="ico">📟</span><span id="tapLabel">Avvicina la statuina al telefono</span></button>
+  <p id="status" class="status">Caricamento…</p>
+  <div id="boxBar" class="boxbar" hidden></div>
+  <div id="nameBanner" class="warn" hidden>
+    <div><b>Nuova storia dalla Toniebox!</b> Come si chiama?</div>
+    <form id="nameForm" style="display:flex;gap:6px;margin-top:8px"><input type="hidden" name="uid">
+      <input type="text" name="title" placeholder="Titolo" required style="flex:1"><button class="primary" style="padding:8px 12px">Salva</button></form>
+  </div>
+
+  <section id="now" class="now">
+    <div class="art" id="nowArt"><img id="nowCover" alt="" hidden><span id="nowEmoji">📖</span></div>
+    <div id="nowTitle" class="title">—</div>
+    <input id="seek" class="seek" type="range" min="0" max="1000" value="0" aria-label="Posizione">
+    <div class="times"><span id="tCur">0:00</span><span id="tDur">0:00</span></div>
+    <div class="controls">
+      <button id="back" class="ctl" aria-label="Indietro 15 secondi">−15s</button>
+      <button id="play" class="ctl big" aria-label="Riproduci">▶</button>
+      <button id="fwd" class="ctl" aria-label="Avanti 15 secondi">+15s</button>
+    </div>
+    <div id="chapters" class="chapters" hidden></div>
+    <audio id="player" preload="none"></audio>
+  </section>
+
+  <h2>Le tue storie</h2>
+  <div id="grid" class="grid"></div>
+  <p id="gridEmpty" class="empty" hidden>Nessuna storia ancora. Aprí il menu ☰ per aggiungerne una.</p>
+</main>
+
+<div id="overlay" class="overlay"></div>
+<aside id="sheet" class="sheet" aria-label="Menu">
+  <header>
+    <button id="sheetBack" class="iconbtn" aria-label="Indietro" hidden>‹</button>
+    <h1 id="sheetTitle">Menu</h1>
+    <button id="sheetClose" class="iconbtn" aria-label="Chiudi">✕</button>
+  </header>
+  <div class="body">
+    <nav id="menu" class="menu panel show">
+      <button data-panel="coins"><span class="ico">🪙</span><span>Gettoni<small>Collega un gettone (o la Tonie creativa) a una storia</small></span></button>
+      <button data-panel="viaggio"><span class="ico">🧳</span><span>Pronti per il viaggio?<small>Cosa la Toniebox ha già scaricato</small></span></button>
+      <button data-panel="toniebox"><span class="ico">📦</span><span>Toniebox<small>Stato, luce notturna, backup</small></span></button>
+      <button data-panel="add"><span class="ico">➕</span><span>Aggiungi una storia<small>Carica l'audio per una statuina o un gettone</small></span></button>
+      <button data-panel="edit"><span class="ico">✏️</span><span>Storie<small>Titoli, copertine, lingua, capitoli, rimozione</small></span></button>
+      <button data-panel="uid"><span class="ico">🔢</span><span>Riproduci un UID<small>Digita il codice di una statuina</small></span></button>
+      <button data-panel="unknown"><span class="ico">❓</span><span>Statuine sconosciute<small>Codici letti ma non ancora associati</small></span></button>
+      <a href="/status" target="_blank" rel="noopener"><span class="ico">🛠</span><span>Stato del server<small>Pagina tecnica</small></span></a>
+      <a id="apkLink" href="/storie.apk"><span class="ico">🤖</span><span>Scarica l'app Android<small>Legge le statuine e suona anche a schermo spento</small></span></a>
+      <button id="updateBtn" hidden><span class="ico">🔄</span><span>Controlla aggiornamenti<small id="appVersion"></small></span></button>
+      <a href="/logout"><span class="ico">&#128274;</span><span>Esci<small>Richiedi di nuovo la parola segreta</small></span></a>
+      <p class="hint" id="about"></p>
+    </nav>
+
+    <section id="panel-add" class="panel">
+      <form id="enrollForm">
+        <div><label for="fUid">Codice (UID) della statuina</label>
+          <input type="text" id="fUid" name="uid" placeholder="E0 04 03 50 …" autocomplete="off" required>
+          <div class="hint">Si compila da solo leggendo la statuina con il telefono.</div></div>
+        <div><label for="fTitle">Titolo della storia</label>
+          <input type="text" id="fTitle" name="title" placeholder="es. Caccia al tesoro" required></div>
+        <div><label for="fAudio">File audio (.opus/.ogg/.mp3/.m4a/.wav)</label>
+          <input type="file" id="fAudio" name="audio" accept="audio/*,.opus,.ogg,.m4a" required></div>
+        <div><label for="fCover">Copertina (facoltativa)</label>
+          <input type="file" id="fCover" name="cover" accept="image/*"></div>
+        <button type="submit" class="primary">Salva la storia</button>
+      </form>
+    </section>
+
+    <section id="panel-coins" class="panel">
+      <div id="coinWizard">
+        <ol class="steps"><li id="st1" class="on">Gettone</li><li id="st2">Storia</li><li id="st3">Toniebox</li></ol>
+
+        <div id="coinStep1" class="step">
+          <div id="boxUnknown"></div>
+          <p class="warn">⚠️ Leggi il gettone con il telefono <b>prima</b> di appoggiarlo sulla Toniebox: dopo la prima volta la Toniebox lo rende invisibile ai telefoni.</p>
+          <button id="coinScan" class="tap"><span class="ico">🪙</span><span id="coinScanLabel">Avvicina il gettone al telefono</span></button>
+          <details class="hint" style="margin-top:10px"><summary>…oppure scrivi il codice a mano</summary>
+            <form id="coinManual" style="margin-top:8px"><input type="text" id="coinUidInput" placeholder="E0 04 03 …" autocomplete="off"><button class="ghost" type="submit">Usa questo codice</button></form>
+          </details>
+          <p id="coinStep1Msg" class="hint"></p>
+        </div>
+
+        <div id="coinStep2" class="step" hidden>
+          <p class="hint">Gettone <code id="coinUidShow"></code>. Quale storia deve raccontare?</p>
+          <div id="coinPick" class="grid"></div>
+          <button id="coinBack1" class="ghost" style="margin-top:12px">‹ Indietro</button>
+        </div>
+
+        <div id="coinStep3" class="step" hidden>
+          <div class="card"><div class="row"><div class="thumb" id="coinDoneArt"></div>
+            <div style="flex:1"><div id="coinDoneTitle" style="font-weight:700"></div><div class="uid" id="coinDoneUid"></div></div></div>
+            <p id="coinDoneState" class="hint" style="margin:10px 0 0"></p></div>
+          <ol class="todo">
+            <li>Appoggia il gettone sulla Toniebox.</li>
+            <li>Se non parte subito, tieni premuto l'orecchio grande per 3 secondi.</li>
+            <li>Sul telefono il gettone non si legge più: usa la storia nella lista.</li>
+          </ol>
+          <button id="coinAnother" class="primary">Collega un altro gettone</button>
+        </div>
+      </div>
+
+      <h2 style="margin-top:22px">I tuoi gettoni</h2>
+      <div id="coinList"></div>
+    </section>
+
+    <section id="panel-viaggio" class="panel">
+      <p class="hint">La Toniebox suona senza internet solo le storie che ha già scaricato. Prima di partire controlla che siano tutte spuntate: per quelle mancanti appoggia la statuina o il gettone sulla Toniebox accesa.</p>
+      <div id="travelList"></div>
+    </section>
+
+    <section id="panel-toniebox" class="panel">
+      <div id="boxCard" class="card"></div>
+      <div class="card">
+        <div style="font-weight:700;margin-bottom:6px">💡 Luce della Toniebox</div>
+        <p class="hint" style="margin:0 0 8px">Per la notte. La Toniebox applica la scelta al prossimo contatto (appoggia una statuina o premi un orecchio).</p>
+        <div class="segmented" id="ledSeg">
+          <button data-led="0">Accesa</button><button data-led="2">Attenuata</button><button data-led="1">Spenta</button>
+        </div>
+      </div>
+      <div class="card">
+        <div style="font-weight:700;margin-bottom:6px">💾 Backup sul NAS</div>
+        <p id="backupInfo" class="hint" style="margin:0 0 8px"></p>
+        <button id="backupBtn" class="ghost">Fai un backup adesso</button>
+      </div>
+    </section>
+
+    <section id="panel-edit" class="panel">
+      <div id="editList"></div>
+    </section>
+
+    <section id="panel-uid" class="panel">
+      <form id="uidForm">
+        <div><label for="mUid">UID</label>
+          <input type="text" id="mUid" placeholder="E0 04 03 50 …" autocomplete="off" required></div>
+        <button type="submit" class="primary">Riproduci</button>
+      </form>
+    </section>
+
+    <section id="panel-unknown" class="panel">
+      <div id="unknownList" class="hint">Caricamento…</div>
+    </section>
+  </div>
+</aside>
+
+<nav id="tabbar" class="tabbar">
+  <button data-tab="home" class="on"><span>🏠</span>Storie</button>
+  <button data-tab="coins"><span>🪙</span>Gettoni</button>
+  <button data-tab="viaggio"><span>🧳</span>Viaggio</button>
+  <button data-tab="toniebox"><span>📦</span>Toniebox</button>
+  <button data-tab="menu"><span>☰</span>Altro</button>
+</nav>
+<div id="toast" class="toast"></div>
+<script src="/static/app.js?v=3"></script>
+</body>
+</html>

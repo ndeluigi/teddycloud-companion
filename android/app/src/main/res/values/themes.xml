@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- same teal as the web app's header, so the system-bar insets blend in -->
+    <style name="Theme.Storie" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">#0e7c86</item>
+        <item name="android:statusBarColor">#0e7c86</item>
+        <item name="android:navigationBarColor">#0e7c86</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+</resources>
