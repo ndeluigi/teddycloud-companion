@@ -23,6 +23,7 @@ $env:ANDROID_SDK_ROOT = $env:ANDROID_HOME
 
 Set-Location $proj
 .\gradlew.bat assembleRelease --no-daemon -q
+if ($LASTEXITCODE -ne 0) { throw "gradle build failed - nothing published" }
 $apk = Get-Item "app\build\outputs\apk\release\app-release.apk"
 
 $bt = Get-ChildItem "$env:ANDROID_HOME\build-tools" | Sort-Object Name -Descending | Select-Object -First 1
