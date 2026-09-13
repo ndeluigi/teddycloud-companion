@@ -35,8 +35,8 @@ android {
         targetSdk = 35
         // bump both before publishing: versionCode is what the updater compares,
         // versionName is what the phone shows a person
-        versionCode = 3
-        versionName = "1.0.2"
+        versionCode = 4
+        versionName = "1.1.0"
         buildConfigField("String", "SITE", "\"$site\"")
         manifestPlaceholders["appName"] = appName
     }

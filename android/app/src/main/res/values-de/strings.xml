@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="update_title">Neue Version</string>
+    <string name="update_message">Storie %1$s ist verfügbar. Jetzt aktualisieren?</string>
+    <string name="update_yes">Aktualisieren</string>
+    <string name="update_later">Später</string>
+    <string name="allow_install">Erlaube Storie, Updates zu installieren, und drücke dann erneut auf Aktualisieren.</string>
+    <string name="open_settings">Einstellungen öffnen</string>
+    <string name="cancel">Abbrechen</string>
+    <string name="downloading">Wird heruntergeladen…</string>
+    <string name="update_failed">Update fehlgeschlagen: %1$s</string>
+    <string name="update_unreachable">Updates nicht erreichbar (%1$s)</string>
+    <string name="up_to_date">Storie ist aktuell</string>
+    <string name="corrupt_download">Datei beschädigt, Download verworfen</string>
+</resources>

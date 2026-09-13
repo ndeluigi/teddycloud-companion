@@ -20,7 +20,7 @@ import java.net.URL
 import java.security.MessageDigest
 
 /**
- * In-app updater: publishing (scripts/publish_apk.ps1) writes a
+ * In-app updater, the same scheme as the Cinema and Famiglia apps: publishing writes a
  * sidecar next to the APK - {versionCode, versionName, sha256} - and the app compares it
  * with its own version on every launch. When the site has a newer build we download it with
  * the WebView's session cookie (the site is behind the Storie password), check the hash, and

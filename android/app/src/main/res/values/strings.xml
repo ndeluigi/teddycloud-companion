@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="update_title">New version</string>
+    <string name="update_message">Storie %1$s is available. Update now?</string>
+    <string name="update_yes">Update</string>
+    <string name="update_later">Later</string>
+    <string name="allow_install">Allow Storie to install updates, then press Update again.</string>
+    <string name="open_settings">Open settings</string>
+    <string name="cancel">Cancel</string>
+    <string name="downloading">Downloading…</string>
+    <string name="update_failed">Update failed: %1$s</string>
+    <string name="update_unreachable">Updates not reachable (%1$s)</string>
+    <string name="up_to_date">Storie is up to date</string>
+    <string name="corrupt_download">corrupt file, download discarded</string>
+</resources>
