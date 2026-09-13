@@ -140,7 +140,7 @@
   .segmented button.on { background:var(--teal); color:#fff; }
   .travel { display:flex; gap:12px; align-items:center; }
   .travel .thumb { width:48px; height:48px; border-radius:10px; overflow:hidden; background:#e7edee; flex:none; }
-  /* guest session (listen-only password): */
+  /* guest session ("storie amici"): listen only */
   body.guest #tabbar, body.guest #menuBtn, body.guest #boxBar, body.guest #nameBanner, body.guest #sheet, body.guest #overlay { display:none !important; }
   body.guest main { padding-bottom:calc(24px + var(--safebot)); }
   body.guest #guestLogout { display:grid; }
@@ -203,6 +203,7 @@
       <button data-panel="uid"><span class="ico">🔢</span><span>Riproduci un UID<small>Digita il codice di una statuina</small></span></button>
       <button data-panel="unknown"><span class="ico">❓</span><span>Statuine sconosciute<small>Codici letti ma non ancora associati</small></span></button>
       <a href="/status" target="_blank" rel="noopener"><span class="ico">🛠</span><span>Stato del server<small>Pagina tecnica</small></span></a>
+      <button data-panel="settings"><span class="ico">🌐</span><span>Impostazioni<small>Lingua dell'app</small></span></button>
       <a id="apkLink" href="/storie.apk"><span class="ico">🤖</span><span>Scarica l'app Android<small>Legge le statuine e suona anche a schermo spento</small></span></a>
       <button id="updateBtn" hidden><span class="ico">🔄</span><span>Controlla aggiornamenti<small id="appVersion"></small></span></button>
       <a href="/logout"><span class="ico">&#128274;</span><span>Esci<small>Richiedi di nuovo la parola segreta</small></span></a>
@@ -282,6 +283,15 @@
       </div>
     </section>
 
+    <section id="panel-settings" class="panel">
+      <div class="card">
+        <div style="font-weight:700;margin-bottom:8px">🌐 Lingua dell'app</div>
+        <div class="segmented" id="langSeg">
+          <button data-lang="it">Italiano</button><button data-lang="de">Deutsch</button><button data-lang="fr">Français</button><button data-lang="en">English</button>
+        </div>
+      </div>
+    </section>
+
     <section id="panel-edit" class="panel">
       <div id="editList"></div>
     </section>
@@ -308,6 +318,7 @@
   <button data-tab="menu"><span>☰</span>Altro</button>
 </nav>
 <div id="toast" class="toast"></div>
-<script src="/static/app.js?v=3"></script>
+<script src="/static/i18n.js?v=4"></script>
+<script src="/static/app.js?v=4"></script>
 </body>
 </html>

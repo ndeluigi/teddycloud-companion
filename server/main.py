@@ -127,19 +127,62 @@ async def auth_gate(request: Request, call_next):
             return await call_next(request)
         if "text/html" in request.headers.get("accept", ""):
             return RedirectResponse("/", status_code=302)
-        return JSONResponse({"detail": "Solo ascolto: questa funzione è riservata alla famiglia."}, status_code=403)
+        return JSONResponse({"detail": _msg(request, "Solo ascolto: questa funzione è riservata alla famiglia.")}, status_code=403)
     if "text/html" in request.headers.get("accept", ""):   # browser navigation -> login page
         nxt = path + (f"?{request.url.query}" if request.url.query else "")
         return RedirectResponse(f"/login?next={quote(nxt, safe='')}", status_code=302)
     return JSONResponse({"detail": "login required"}, status_code=401)
 
 
+def _msg(request: Request, text: str) -> str:
+    """Server-side messages shown by the app as toasts, in the language the app chose."""
+    lang = request.cookies.get("storie_lang", "")
+    return (_MSG_T.get(text) or {}).get(lang, text)
+
+
 def _safe_next(nxt: str) -> str:
     return nxt if nxt.startswith("/") and not nxt.startswith("//") else "/"
 
 
-def _login_html(error: str = "", nxt: str = "/") -> str:
+_LOGIN_T = {
+    "it": ("Inserisci la parola segreta per ascoltare le storie.", "Parola segreta", "Entra", "Parola segreta sbagliata."),
+    "de": ("Gib das geheime Wort ein, um die Geschichten zu hören.", "Geheimes Wort", "Los", "Falsches geheimes Wort."),
+    "fr": ("Saisis le mot secret pour écouter les histoires.", "Mot secret", "Entrer", "Mot secret incorrect."),
+    "en": ("Enter the secret word to listen to the stories.", "Secret word", "Enter", "Wrong secret word."),
+}
+_MSG_T = {
+    "Storia non trovata.": {"de": "Geschichte nicht gefunden.", "fr": "Histoire introuvable.", "en": "Story not found."},
+    "Gettone non trovato.": {"de": "Münze nicht gefunden.", "fr": "Jeton introuvable.", "en": "Coin not found."},
+    "Versione non disponibile.": {"de": "Version nicht verfügbar.", "fr": "Version indisponible.", "en": "Version not available."},
+    "Toniebox non ancora vista da teddycloud.": {"de": "Toniebox von teddycloud noch nicht gesehen.", "fr": "Toniebox pas encore vue par teddycloud.", "en": "Toniebox not seen by teddycloud yet."},
+    "APK non ancora pubblicato.": {"de": "APK noch nicht veröffentlicht.", "fr": "APK pas encore publié.", "en": "APK not published yet."},
+    "Questo codice è un gettone: scollegalo prima dai Gettoni.": {"de": "Dieser Code ist eine Münze: löse sie zuerst unter Münzen.", "fr": "Ce code est un jeton : dissocie-le d'abord dans Jetons.", "en": "This code is a coin: unlink it first under Coins."},
+    "Questo codice appartiene a una statuina originale, non a un gettone.": {"de": "Dieser Code gehört zu einer Originalfigur, nicht zu einer Münze.", "fr": "Ce code appartient à une figurine originale, pas à un jeton.", "en": "This code belongs to an original figurine, not a coin."},
+    "Il codice non sembra un gettone compatibile: deve avere 16 caratteri e iniziare con E0 04 03.": {"de": "Der Code sieht nicht nach einer kompatiblen Münze aus: 16 Zeichen, beginnt mit E0 04 03.", "fr": "Le code ne ressemble pas à un jeton compatible : 16 caractères, commence par E0 04 03.", "en": "The code does not look like a compatible coin: 16 characters, starting with E0 04 03."},
+    "Solo ascolto: questa funzione è riservata alla famiglia.": {"de": "Nur zuhören: diese Funktion ist der Familie vorbehalten.", "fr": "Écoute seule : cette fonction est réservée à la famille.", "en": "Listen only: this feature is for the family."},
+}
+
+
+def _lang(request: Request) -> str:
+    q = request.query_params.get("lang", "")
+    if q in _LOGIN_T:
+        return q
+    c = request.cookies.get("storie_lang", "")
+    if c in _LOGIN_T:
+        return c
+    for part in request.headers.get("accept-language", "").lower().split(","):
+        code = part.strip()[:2]
+        if code in _LOGIN_T:
+            return code
+    return "en"
+
+
+def _login_html(error: str = "", nxt: str = "/", lang: str = "it") -> str:
+    intro, placeholder, enter, _ = _LOGIN_T.get(lang, _LOGIN_T["it"])
     err = f'<p class="err">{error}</p>' if error else ""
+    langs = " · ".join(
+        (f"<b>{name}</b>" if code == lang else f'<a href="/login?lang={code}&next={quote(nxt, safe="")}">{name}</a>')
+        for code, name in (("it", "IT"), ("de", "DE"), ("fr", "FR"), ("en", "EN")))
     return f"""<!doctype html><html lang=it><meta charset=utf-8>
 <meta name=viewport content="width=device-width,initial-scale=1"><meta name=theme-color content="#0e7c86">
 <link rel=manifest href="/manifest.webmanifest?v=3"><link rel=icon href="/static/icon-192.png?v=3">
@@ -150,23 +193,28 @@ form{{background:#fff;border-radius:22px;padding:28px 24px;width:min(90vw,340px)
 h1{{margin:0 0 6px;font-size:26px;color:#14202a}}p{{margin:0 0 18px;color:#6b7a82;font-size:14px}}
 input{{width:100%;box-sizing:border-box;font:inherit;font-size:18px;padding:13px;border:1px solid #d9e0e2;border-radius:12px}}
 button{{width:100%;margin-top:12px;font:inherit;font-size:17px;font-weight:700;padding:14px;border:0;border-radius:12px;background:#0e7c86;color:#fff}}
-.err{{color:#c0392b;font-weight:600}}</style>
+.err{{color:#c0392b;font-weight:600}}.langs{{margin:14px 0 0;font-size:13px;text-align:center}}.langs a{{color:#0e7c86;text-decoration:none}}</style>
 <form method=post action=/login>
-<h1>&#128218; Storie</h1><p>Inserisci la parola segreta per ascoltare le storie.</p>{err}
+<h1>&#128218; Storie</h1><p>{intro}</p>{err}
 <input type=hidden name=next value="{nxt}">
-<input type=password name=password placeholder="Parola segreta" autofocus autocomplete=current-password required>
-<button>Entra</button></form></html>"""
+<input type=hidden name=lang value="{lang}">
+<input type=password name=password placeholder="{placeholder}" autofocus autocomplete=current-password required>
+<button>{enter}</button><p class="langs">{langs}</p></form></html>"""
 
 
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request):
     if not PASSWORD:
         return RedirectResponse("/", status_code=302)
-    return HTMLResponse(_login_html(nxt=_safe_next(request.query_params.get("next", "/"))))
+    lang = _lang(request)
+    resp = HTMLResponse(_login_html(nxt=_safe_next(request.query_params.get("next", "/")), lang=lang))
+    if request.query_params.get("lang") in _LOGIN_T:
+        resp.set_cookie("storie_lang", lang, max_age=365 * 24 * 3600, samesite="lax", path="/")
+    return resp
 
 
 @app.post("/login")
-async def login(password: str = Form(...), next: str = Form("/")):
+async def login(password: str = Form(...), next: str = Form("/"), lang: str = Form("it")):
     typed = password.strip()
     relaxed = "".join(typed.split()).casefold()      # guests: spaces and case do not matter
     session = None
@@ -180,7 +228,8 @@ async def login(password: str = Form(...), next: str = Form("/")):
                         secure=True, samesite="lax", path="/")
         return resp
     await asyncio.sleep(1.5)   # slow down guessing
-    return HTMLResponse(_login_html("Parola segreta sbagliata.", _safe_next(next)), status_code=401)
+    lang = lang if lang in _LOGIN_T else "it"
+    return HTMLResponse(_login_html(_LOGIN_T[lang][3], _safe_next(next), lang), status_code=401)
 
 
 @app.get("/logout")

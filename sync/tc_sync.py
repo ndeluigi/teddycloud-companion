@@ -123,7 +123,7 @@ def ruid_to_uid(ruid):
 
 
 def uid_to_dir(uid):
-    """UID E00403AABBCCDDEE -> content dir EEDDCCBB, file AA0304E0 (rUID split in two)."""
+    """UID E00403AABBCCDDEE -> content dir EEDDCCBB, file 500304E0 (rUID split in two)."""
     ruid = bytes(reversed(bytes.fromhex(uid))).hex().upper()
     return ruid[:8], ruid[8:]
 
@@ -525,7 +525,7 @@ def sync_media_and_chapters(storie, figs, recs):
 
 
 def versions_info(figs, recs):
-    """COMPANION_DIR/versions.json: {UID: {lang: lib://...}} -> state.versions with current lang."""
+    """~/toniephone/versions.json: {UID: {lang: lib://...}} -> state.versions with current lang."""
     try:
         cfg = json.load(open(VERSIONS_FILE))
     except Exception:

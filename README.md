@@ -79,8 +79,9 @@ Details, configuration keys and the coin/travel/language workflows: [docs/SETUP.
 
 ## Honest notes
 
-- The UI is in Italian (this started as a family project in Ticino). Strings live in
-  `server/static/index.html` and `app.js`; an i18n pass is welcome.
+- UI in Italian, German, French and English (menu → Settings, and on the login page; the
+  browser language is the default). Translations live in `server/static/i18n.js`, keyed by
+  the Italian source strings — adding a language is one more block there.
 - No audio is included and none will be: TAF files are the copyrighted audio of the Tonies
   you own. The companion only moves your own rips between your own devices.
 - Tested with a Toniebox 1 (CC3200) on original firmware. teddycloud's LED setting works on

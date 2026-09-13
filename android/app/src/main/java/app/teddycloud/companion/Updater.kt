@@ -25,7 +25,8 @@ import java.security.MessageDigest
  * with its own version on every launch. When the site has a newer build we download it with
  * the WebView's session cookie (the site is behind the Storie password), check the hash, and
  * hand the file to Android's package installer. Android never allows a silent sideload
- * install, so the last step is always one confirmation tap.
+ * install, so the last step is always one confirmation tap. Dialog texts follow the phone's
+ * language (res/values-it, -de, -fr, English default).
  */
 object Updater {
     const val SITE = BuildConfig.SITE   // android/companion.properties -> site=
@@ -43,7 +44,7 @@ object Updater {
                     activity.packageManager.getPackageInfo(activity.packageName, 0))
                 if (published.optLong("versionCode", 0) > mine) newer = published
             } catch (e: Exception) {
-                failure = e.message ?: "non raggiungibile"
+                failure = e.message ?: "?"
             }
             val found = newer
             on(activity) {
@@ -51,8 +52,8 @@ object Updater {
                     found != null -> offer(activity, found.optString("versionName", "?"),
                                            found.optString("sha256", ""))
                     quiet -> {}
-                    failure != null -> toast(activity, "Aggiornamenti non raggiungibili ($failure)")
-                    else -> toast(activity, "Storie è già aggiornata")
+                    failure != null -> toast(activity, activity.getString(R.string.update_unreachable, failure))
+                    else -> toast(activity, activity.getString(R.string.up_to_date))
                 }
             }
         }.start()
@@ -60,10 +61,10 @@ object Updater {
 
     private fun offer(activity: Activity, version: String, sha256: String) {
         AlertDialog.Builder(activity)
-            .setTitle("Nuova versione")
-            .setMessage("Storie $version è disponibile. Vuoi aggiornare?")
-            .setPositiveButton("Aggiorna") { _, _ -> install(activity, sha256) }
-            .setNegativeButton("Più tardi", null)
+            .setTitle(R.string.update_title)
+            .setMessage(activity.getString(R.string.update_message, version))
+            .setPositiveButton(R.string.update_yes) { _, _ -> install(activity, sha256) }
+            .setNegativeButton(R.string.update_later, null)
             .show()
     }
 
@@ -71,18 +72,18 @@ object Updater {
         // one-time per phone: Android asks whether this app may install apps
         if (!activity.packageManager.canRequestPackageInstalls()) {
             AlertDialog.Builder(activity)
-                .setMessage("Consenti a Storie di installare aggiornamenti, poi premi di nuovo Aggiorna.")
-                .setPositiveButton("Apri impostazioni") { _, _ ->
+                .setMessage(R.string.allow_install)
+                .setPositiveButton(R.string.open_settings) { _, _ ->
                     activity.startActivity(
                         Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
                                Uri.parse("package:" + activity.packageName)))
                 }
-                .setNegativeButton("Annulla", null)
+                .setNegativeButton(R.string.cancel, null)
                 .show()
             return
         }
         val progress = AlertDialog.Builder(activity)
-            .setMessage("Scaricamento in corso…")
+            .setMessage(R.string.downloading)
             .setCancelable(false)
             .show()
         Thread {
@@ -91,13 +92,13 @@ object Updater {
             try {
                 apk = download(activity, sha256)
             } catch (e: Exception) {
-                failure = e.message ?: "errore"
+                failure = e.message ?: "?"
             }
             val ready = apk
             on(activity) {
                 progress.dismiss()
                 if (ready == null) {
-                    toast(activity, "Aggiornamento fallito: $failure")
+                    toast(activity, activity.getString(R.string.update_failed, failure))
                 } else {
                     activity.startActivity(
                         Intent(Intent.ACTION_VIEW)
@@ -128,7 +129,7 @@ object Updater {
         val got = digest.digest().joinToString("") { "%02x".format(it) }
         if (sha256.isNotEmpty() && !sha256.equals(got, ignoreCase = true)) {
             apk.delete()
-            throw Exception("file corrotto, scaricamento scartato")
+            throw Exception(ctx.getString(R.string.corrupt_download))
         }
         return FileProvider.getUriForFile(ctx, ctx.packageName + ".fileprovider", apk)
     }

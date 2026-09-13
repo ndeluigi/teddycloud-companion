@@ -1,8 +1,9 @@
 // Storie service worker — caches the app shell so the UI opens instantly and
 // works offline; audio streams and API calls always go to the network.
-const CACHE = "storie-shell-v5";
+const CACHE = "storie-shell-v6";
 const SHELL = [
-  "/static/app.js?v=3",
+  "/static/i18n.js?v=4",
+  "/static/app.js?v=4",
   "/manifest.webmanifest?v=3",
   "/static/icon-192.png?v=3",
   "/static/icon-512.png?v=3",
