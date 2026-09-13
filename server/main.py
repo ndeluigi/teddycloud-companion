@@ -83,11 +83,37 @@ async def no_store_shell(request: Request, call_next):
     return resp
 
 # ---- password gate ----------------------------------------------------------
-PASSWORD = (os.environ.get("COMPANION_PASSWORD") or os.environ.get("STORIE_PASSWORD") or "").strip()
-GUEST_PASSWORD = (os.environ.get("COMPANION_GUEST_PASSWORD") or os.environ.get("STORIE_GUEST_PASSWORD") or "").strip()
+# Passwords: the environment seeds them; config/auth.json (written by the Settings panel)
+# overrides it, so they can be changed from the app without a redeploy. tc_sync.py reads the
+# same file for its X-Storie-Password header.
+AUTH_FILE = BASE / "config" / "auth.json"
+AUTH = {
+    "admin": (os.environ.get("COMPANION_PASSWORD") or os.environ.get("STORIE_PASSWORD") or "").strip(),
+    "guest": (os.environ.get("COMPANION_GUEST_PASSWORD") or os.environ.get("STORIE_GUEST_PASSWORD") or "").strip(),
+}
+try:
+    _saved = json.loads(AUTH_FILE.read_text(encoding="utf-8"))
+    for k in ("admin", "guest"):
+        if isinstance(_saved.get(k), str):
+            AUTH[k] = _saved[k].strip()
+except Exception:
+    pass
+PASSWORD = AUTH["admin"]        # "" = engine open (LAN-only use)
+
+
+def _save_auth() -> None:
+    AUTH_FILE.parent.mkdir(parents=True, exist_ok=True)
+    AUTH_FILE.write_text(json.dumps(AUTH, indent=1), encoding="utf-8")
+
+
 # Cookie values derived from the passwords: changing a password logs that group out.
-_SESSION = hashlib.sha256(f"storie-session:{PASSWORD}".encode()).hexdigest() if PASSWORD else ""
-_GUEST_SESSION = hashlib.sha256(f"storie-guest:{GUEST_PASSWORD}".encode()).hexdigest() if GUEST_PASSWORD else ""
+def _session_for(role: str) -> str:
+    pw = AUTH.get(role, "")
+    if not pw:
+        return ""
+    return hashlib.sha256(f"{'storie-session' if role == 'admin' else 'storie-guest'}:{pw}".encode()).hexdigest()
+
+
 _COOKIE = "storie_session"
 _PUBLIC = {"/login", "/logout", "/health", "/manifest.webmanifest", "/sw.js"}
 # what a guest session may touch: the stories, and the app itself
@@ -97,15 +123,16 @@ _GUEST_PREFIXES = ("/resolve/", "/stream/", "/cover/")
 
 def _role(request: Request) -> str | None:
     """'admin', 'guest' or None (not logged in)."""
-    if not PASSWORD:
+    if not AUTH["admin"]:
         return "admin"
     cookie = request.cookies.get(_COOKIE, "")
-    if cookie and hmac.compare_digest(cookie, _SESSION):
+    if cookie and hmac.compare_digest(cookie, _session_for("admin")):
         return "admin"
-    if cookie and _GUEST_SESSION and hmac.compare_digest(cookie, _GUEST_SESSION):
+    guest = _session_for("guest")
+    if cookie and guest and hmac.compare_digest(cookie, guest):
         return "guest"
     header = request.headers.get("x-storie-password", "")
-    if header and hmac.compare_digest(header, PASSWORD):
+    if header and hmac.compare_digest(header, AUTH["admin"]):
         return "admin"
     return None
 
@@ -160,6 +187,10 @@ _MSG_T = {
     "Questo codice appartiene a una statuina originale, non a un gettone.": {"de": "Dieser Code gehört zu einer Originalfigur, nicht zu einer Münze.", "fr": "Ce code appartient à une figurine originale, pas à un jeton.", "en": "This code belongs to an original figurine, not a coin."},
     "Il codice non sembra un gettone compatibile: deve avere 16 caratteri e iniziare con E0 04 03.": {"de": "Der Code sieht nicht nach einer kompatiblen Münze aus: 16 Zeichen, beginnt mit E0 04 03.", "fr": "Le code ne ressemble pas à un jeton compatible : 16 caractères, commence par E0 04 03.", "en": "The code does not look like a compatible coin: 16 characters, starting with E0 04 03."},
     "Solo ascolto: questa funzione è riservata alla famiglia.": {"de": "Nur zuhören: diese Funktion ist der Familie vorbehalten.", "fr": "Écoute seule : cette fonction est réservée à la famille.", "en": "Listen only: this feature is for the family."},
+    "Parola segreta attuale sbagliata.": {"de": "Aktuelles geheimes Wort ist falsch.", "fr": "Mot secret actuel incorrect.", "en": "Current secret word is wrong."},
+    "Almeno 6 caratteri.": {"de": "Mindestens 6 Zeichen.", "fr": "Au moins 6 caractères.", "en": "At least 6 characters."},
+    "Almeno 4 caratteri.": {"de": "Mindestens 4 Zeichen.", "fr": "Au moins 4 caractères.", "en": "At least 4 characters."},
+    "Deve essere diversa da quella degli amici.": {"de": "Muss sich vom Wort der Freunde unterscheiden.", "fr": "Doit être différent de celui des amis.", "en": "Must differ from the friends' word."},
 }
 
 
@@ -204,7 +235,7 @@ button{{width:100%;margin-top:12px;font:inherit;font-size:17px;font-weight:700;p
 
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request):
-    if not PASSWORD:
+    if not AUTH["admin"]:
         return RedirectResponse("/", status_code=302)
     lang = _lang(request)
     resp = HTMLResponse(_login_html(nxt=_safe_next(request.query_params.get("next", "/")), lang=lang))
@@ -218,10 +249,10 @@ async def login(password: str = Form(...), next: str = Form("/"), lang: str = Fo
     typed = password.strip()
     relaxed = "".join(typed.split()).casefold()      # guests: spaces and case do not matter
     session = None
-    if PASSWORD and hmac.compare_digest(typed, PASSWORD):
-        session = _SESSION
-    elif GUEST_PASSWORD and hmac.compare_digest(relaxed, "".join(GUEST_PASSWORD.split()).casefold()):
-        session = _GUEST_SESSION
+    if AUTH["admin"] and hmac.compare_digest(typed, AUTH["admin"]):
+        session = _session_for("admin")
+    elif AUTH["guest"] and hmac.compare_digest(relaxed, "".join(AUTH["guest"].split()).casefold()):
+        session = _session_for("guest")
     if session:
         resp = RedirectResponse(_safe_next(next), status_code=303)
         resp.set_cookie(_COOKIE, session, max_age=365 * 24 * 3600, httponly=True,
@@ -236,6 +267,32 @@ async def login(password: str = Form(...), next: str = Form("/"), lang: str = Fo
 def logout():
     resp = RedirectResponse("/login", status_code=302)
     resp.delete_cookie(_COOKIE, path="/")
+    return resp
+
+
+@app.post("/settings/password")
+async def change_password(request: Request, kind: str = Form(...), current: str = Form(...), new: str = Form(...)):
+    """Change the family (admin) or friends (guest) password. Always needs the current family
+    password. Changing the family password logs every other device out; this one gets the new
+    cookie. Changing the friends' phrase logs the friends out until they type the new one."""
+    if kind not in ("admin", "guest"):
+        raise HTTPException(status_code=400, detail="kind")
+    if not AUTH["admin"] or not hmac.compare_digest(current.strip(), AUTH["admin"]):
+        await asyncio.sleep(1.5)
+        raise HTTPException(status_code=403, detail=_msg(request, "Parola segreta attuale sbagliata."))
+    new = new.strip()
+    if kind == "admin" and len(new) < 6:
+        raise HTTPException(status_code=400, detail=_msg(request, "Almeno 6 caratteri."))
+    if kind == "guest" and new and len(new) < 4:
+        raise HTTPException(status_code=400, detail=_msg(request, "Almeno 4 caratteri."))
+    if kind == "admin" and new == AUTH["guest"]:
+        raise HTTPException(status_code=400, detail=_msg(request, "Deve essere diversa da quella degli amici."))
+    AUTH[kind] = new
+    _save_auth()
+    resp = JSONResponse({"ok": True, "kind": kind, "guest_enabled": bool(AUTH["guest"])})
+    if kind == "admin":
+        resp.set_cookie(_COOKIE, _session_for("admin"), max_age=365 * 24 * 3600, httponly=True,
+                        secure=True, samesite="lax", path="/")
     return resp
 
 

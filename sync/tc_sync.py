@@ -100,7 +100,13 @@ CUSTOM_OFFSET = 0x50000000                   # teddycloud adds this to audio ids
 
 
 def _storie_password():
-    """The admin password (COMPANION_PASSWORD), sent to the server as X-Storie-Password."""
+    """The admin password: config/auth.json (changed from the app) wins over .env / env."""
+    try:
+        pw = json.load(open(f"{STORIE_DIR}/config/auth.json")).get("admin", "")
+        if pw:
+            return pw
+    except Exception:
+        pass
     return cfg("COMPANION_PASSWORD") or cfg("STORIE_PASSWORD")
 
 

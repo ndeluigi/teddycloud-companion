@@ -4,6 +4,7 @@ library.json
 media/
 state/
 apps/
+config/
 versions.json
 coins.json
 *.log

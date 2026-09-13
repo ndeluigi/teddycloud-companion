@@ -104,7 +104,10 @@
   .panel.show { display:block; }
   form { display:grid; gap:12px; }
   label { font-size:13px; color:var(--muted); display:block; margin-bottom:4px; }
-  input[type=text], input[type=file] { width:100%; padding:11px; border:1px solid var(--line); border-radius:12px; background:#fff; font:inherit; }
+  .pwform { display:grid; gap:10px; }
+  .guestfoot { margin-top:28px; display:grid; gap:10px; justify-items:center; text-align:center; }
+  .guestfoot a.ghost { text-decoration:none; color:var(--ink); display:inline-block; }
+  input[type=password], input[type=text], input[type=file] { width:100%; padding:11px; border:1px solid var(--line); border-radius:12px; background:#fff; font:inherit; }
   .primary { border:0; border-radius:12px; background:var(--teal); color:#fff; padding:14px; font-weight:700; }
   .ghost { border:1px solid var(--line); background:#fff; border-radius:12px; padding:12px; }
   .hint { font-size:12px; color:var(--muted); }
@@ -184,6 +187,12 @@
   <h2>Le tue storie</h2>
   <div id="grid" class="grid"></div>
   <p id="gridEmpty" class="empty" hidden>Nessuna storia ancora. Aprí il menu ☰ per aggiungerne una.</p>
+  <footer id="guestFoot" class="guestfoot" hidden>
+    <div class="chips" id="guestLangs"><button data-lang="it">IT</button><button data-lang="de">DE</button><button data-lang="fr">FR</button><button data-lang="en">EN</button></div>
+    <a id="guestApk" class="ghost" href="/storie.apk">📱 Scarica l'app Android</a>
+    <button id="guestUpdate" class="ghost" hidden>🔄 Controlla aggiornamenti</button>
+    <div id="guestVersion" class="hint"></div>
+  </footer>
 </main>
 
 <div id="overlay" class="overlay"></div>
@@ -290,6 +299,21 @@
           <button data-lang="it">Italiano</button><button data-lang="de">Deutsch</button><button data-lang="fr">Français</button><button data-lang="en">English</button>
         </div>
       </div>
+      <form class="card pwform" data-kind="admin">
+        <div style="font-weight:700;margin-bottom:4px">🔑 Parola segreta della famiglia</div>
+        <p class="hint" style="margin:0 0 10px">Accesso completo. Cambiandola, gli altri telefoni della famiglia dovranno rifare l'accesso.</p>
+        <div><label>Parola segreta attuale</label><input type="password" name="current" autocomplete="current-password" required></div>
+        <div><label>Nuova parola segreta</label><input type="password" name="new" autocomplete="new-password" required minlength="6"></div>
+        <div><label>Ripeti la nuova parola segreta</label><input type="password" name="repeat" autocomplete="new-password" required></div>
+        <button class="primary">Cambia</button>
+      </form>
+      <form class="card pwform" data-kind="guest">
+        <div style="font-weight:700;margin-bottom:4px">👥 Parola segreta degli amici</div>
+        <p class="hint" style="margin:0 0 10px">Solo ascolto. Spazi e maiuscole non contano. Lascia vuoto per disattivare l'accesso degli amici.</p>
+        <div><label>Parola segreta attuale della famiglia</label><input type="password" name="current" autocomplete="current-password" required></div>
+        <div><label>Nuova parola segreta degli amici</label><input type="text" name="new" autocomplete="off"></div>
+        <button class="primary">Cambia</button>
+      </form>
     </section>
 
     <section id="panel-edit" class="panel">
@@ -318,7 +342,7 @@
   <button data-tab="menu"><span>☰</span>Altro</button>
 </nav>
 <div id="toast" class="toast"></div>
-<script src="/static/i18n.js?v=4"></script>
-<script src="/static/app.js?v=4"></script>
+<script src="/static/i18n.js?v=5"></script>
+<script src="/static/app.js?v=5"></script>
 </body>
 </html>

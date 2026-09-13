@@ -14,6 +14,7 @@ services:
       - ./media:/app/media
       - ./state:/app/state:ro
       - ./apps:/app/apps:ro
+      - ./config:/app/config          # auth.json: passwords changed from the app
     networks:
       - companion_net
 

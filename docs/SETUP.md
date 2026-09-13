@@ -24,6 +24,7 @@ Keys in `.env`:
 |---|---|
 | `COMPANION_PASSWORD` | family password (full access) |
 | `COMPANION_GUEST_PASSWORD` | optional listen-only password for friends |
+| (Settings in the app) | both passwords can be changed from the app afterwards; they are stored in `config/auth.json`, which overrides the env values |
 | `TEDDYCLOUD_URL` | teddycloud's web port as seen from inside the companion container |
 | `COMPANION_NETWORK` | docker network to join — use teddycloud's to reach it by name |
 | `COMPANION_DIR`, `TEDDYCLOUD_DIR`, `TEDDYCLOUD_CONTAINER`, `TEDDYCLOUD_API` | for `tc_sync.py` on the host |

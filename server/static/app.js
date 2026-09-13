@@ -184,6 +184,7 @@ async function loadLibrary() {
     GUEST = data.role === "guest";
     document.body.classList.toggle("guest", GUEST);
     $("guestLogout").hidden = !GUEST;
+    $("guestFoot").hidden = !GUEST;
     meta = { box: data.box || {}, box_unknown: data.box_unknown || [], backup: data.backup || {} };
     renderBoxBar();
     renderNameBanner();
@@ -608,6 +609,29 @@ $("backupBtn").addEventListener("click", async () => {
 setInterval(() => { if (document.visibilityState === "visible") loadLibrary(); }, 30000);
 
 $("langSeg").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => setLang(b.dataset.lang)));
+$("guestLangs").querySelectorAll("button").forEach((b) => { b.classList.toggle("on", b.dataset.lang === LANG); b.addEventListener("click", () => setLang(b.dataset.lang)); });
+if (NATIVE) {
+  $("guestApk").hidden = true;
+  $("guestUpdate").hidden = false;
+  $("guestUpdate").addEventListener("click", () => StorieApp.checkUpdate());
+  $("guestVersion").textContent = t("Versione installata: {v}", { v: StorieApp.version() });
+}
+
+// password changes (Settings)
+document.querySelectorAll("form.pwform").forEach((form) => form.addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const kind = form.dataset.kind;
+  const fresh = form.new.value.trim();
+  if (kind === "admin" && fresh !== form.repeat.value.trim()) { toast(t("Le due parole non coincidono")); return; }
+  const fd = new FormData(); fd.append("kind", kind); fd.append("current", form.current.value); fd.append("new", fresh);
+  try {
+    const r = await fetch("/settings/password", { method: "POST", body: fd });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { toast(d.detail || t("Errore")); return; }
+    form.reset();
+    toast(kind === "admin" ? t("Parola segreta cambiata") : (d.guest_enabled ? t("Parola segreta degli amici cambiata: comunicala agli amici") : t("Accesso degli amici disattivato")));
+  } catch (_) { toast(t("Errore di rete")); }
+}));
 
 // manual UID
 $("uidForm").addEventListener("submit", (ev) => { ev.preventDefault(); closeSheet(); playUid($("mUid").value); });
