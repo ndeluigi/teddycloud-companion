@@ -559,6 +559,8 @@ def library(request: Request):
         "box": st.get("box") or {},
         "box_unknown": st.get("box_unknown") or [],
         "backup": st.get("backup") or {},
+        "history": st.get("history") or [],
+        "settings": _extra.get("settings") or {},
         "state_updated": st.get("updated"),
     }
 
@@ -650,6 +652,20 @@ async def backup_request():
     return {"ok": True, "requested": _extra["requests"]["backup"]}
 
 
+@app.post("/box/schedule")
+async def box_schedule(enabled: str = Form("0"), off_at: str = Form("19:00"), on_at: str = Form("07:00"), mode: str = Form("2")):
+    """Bedtime schedule for the Toniebox LED, enforced by tc_sync.py every minute."""
+    for v in (off_at, on_at):
+        if not re.match(r"^\d\d:\d\d$", v):
+            raise HTTPException(status_code=400, detail="time must be HH:MM")
+    if mode not in ("1", "2"):
+        raise HTTPException(status_code=400, detail="mode must be 1 or 2")
+    _extra.setdefault("settings", {})["led_schedule"] = {
+        "enabled": enabled in ("1", "true", "on"), "off_at": off_at, "on_at": on_at, "mode": int(mode)}
+    save_library()
+    return {"ok": True, "led_schedule": _extra["settings"]["led_schedule"]}
+
+
 @app.post("/box/led")
 async def box_led(mode: str = Form(...)):
     """Toniebox LED: 0 on, 1 off, 2 dimmed. Applied by the box at its next contact."""
@@ -668,7 +684,7 @@ async def box_led(mode: str = Form(...)):
     return {"ok": True, "led": int(mode)}
 
 
-_ALLOWED_AUDIO = {".opus", ".ogg", ".oga", ".mp3", ".m4a", ".aac", ".wav"}
+_ALLOWED_AUDIO = {".opus", ".ogg", ".oga", ".mp3", ".m4a", ".aac", ".wav", ".webm"}   # .webm: phone recordings
 _ALLOWED_IMAGE = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
 
 

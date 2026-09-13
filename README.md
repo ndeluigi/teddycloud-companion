@@ -37,6 +37,9 @@ switch — so nobody has to open teddycloud's own admin page.
 - **Toniebox** — online/last contact/last story, LED on/dimmed/off, backup to a NAS.
 - **Stories** — rename, cover, language version chips (one figurine, several TAFs), skip‑intro
   seconds, remove (cleans the box record and uploads too).
+- **Record a story** from the phone's microphone; **offline stories** on the phone (browser cache
+  or the app's storage) for trips; **sleep timer**; resume where you left off; **kids lock**;
+  printable **coin labels**; **listening history** from the box; **bedtime LED schedule**.
 - New rips are announced with a "give it a name" banner; titles and covers flow back into
   teddycloud's `tonies.custom.json`, so both UIs show the same names and pictures.
 

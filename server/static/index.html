@@ -147,6 +147,14 @@
   body.guest #tabbar, body.guest #menuBtn, body.guest #boxBar, body.guest #nameBanner, body.guest #sheet, body.guest #overlay { display:none !important; }
   body.guest main { padding-bottom:calc(24px + var(--safebot)); }
   body.guest #guestLogout { display:grid; }
+  .playerx { display:flex; gap:10px; align-items:center; justify-content:center; margin-top:10px; flex-wrap:wrap; }
+  .ghost.small { padding:7px 11px; font-size:13px; }
+  .fig .art { position:relative; }
+  .fig .prog { position:absolute; left:0; bottom:0; height:5px; background:var(--accent); }
+  .fig .off { position:absolute; top:6px; right:6px; font-size:14px; background:rgba(255,255,255,.9); border-radius:8px; padding:1px 5px; }
+  body.kidslock #tabbar button:not([data-tab="home"]):not([data-tab="menu"]) { display:none; }
+  input[type=time], select { font:inherit; padding:10px; border:1px solid var(--line); border-radius:12px; background:#fff; }
+  .hist { display:flex; justify-content:space-between; gap:10px; padding:5px 0; border-bottom:1px solid #eef3f4; color:var(--ink); }
   .toast { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(24px + var(--safebot));
            background:#14202a; color:#fff; padding:12px 18px; border-radius:12px; font-size:14px; opacity:0;
            transition:opacity .2s; pointer-events:none; z-index:30; max-width:90vw; text-align:center; }
@@ -181,6 +189,14 @@
       <button id="fwd" class="ctl" aria-label="Avanti 15 secondi">+15s</button>
     </div>
     <div id="chapters" class="chapters" hidden></div>
+    <div class="playerx">
+      <button id="restart" class="ghost small" hidden>⏮ Dall'inizio</button>
+      <button id="sleep" class="ghost small">💤 Timer</button>
+      <span id="sleepInfo" class="hint"></span>
+    </div>
+    <div id="sleepMenu" class="chips" hidden>
+      <button data-min="0">Spento</button><button data-min="15">15 min</button><button data-min="30">30 min</button><button data-min="45">45 min</button><button data-min="chapter">Fine del capitolo</button>
+    </div>
     <audio id="player" preload="none"></audio>
   </section>
 
@@ -220,6 +236,16 @@
     </nav>
 
     <section id="panel-add" class="panel">
+      <div class="card" id="recCard">
+        <div style="font-weight:700;margin-bottom:4px">🎙 Registra una storia</div>
+        <p class="hint" style="margin:0 0 10px">Leggi un libro al telefono: la registrazione diventa una storia per la Toniebox e per i gettoni.</p>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button type="button" id="recBtn" class="primary">● Inizia a registrare</button>
+          <span id="recTime" class="hint"></span>
+        </div>
+        <audio id="recPreview" controls hidden style="width:100%;margin-top:10px"></audio>
+        <p id="recReady" class="hint" hidden style="margin:8px 0 0">✅ Registrazione pronta: scrivi il codice e il titolo qui sotto e salva.</p>
+      </div>
       <form id="enrollForm">
         <div><label for="fUid">Codice (UID) della statuina</label>
           <input type="text" id="fUid" name="uid" placeholder="E0 04 03 50 …" autocomplete="off" required>
@@ -268,6 +294,7 @@
       </div>
 
       <h2 style="margin-top:22px">I tuoi gettoni</h2>
+      <a class="ghost" style="display:inline-block;text-decoration:none;margin-bottom:10px" href="/static/labels.html" target="_blank" rel="noopener">🖨 Etichette per i gettoni</a>
       <div id="coinList"></div>
     </section>
 
@@ -285,6 +312,19 @@
           <button data-led="0">Accesa</button><button data-led="2">Attenuata</button><button data-led="1">Spenta</button>
         </div>
       </div>
+      <form class="card" id="schedForm" style="display:grid;gap:8px">
+        <label style="display:flex;gap:10px;align-items:center;font-weight:700;font-size:15px;color:var(--ink)"><input type="checkbox" name="enabled" style="width:22px;height:22px"> 🌙 Luce notturna automatica</label>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end">
+          <div><label>Dalle</label><input type="time" name="off_at" value="19:00"></div>
+          <div><label>Alle</label><input type="time" name="on_at" value="07:00"></div>
+          <div><label>Luce di notte</label><select name="mode"><option value="2">Attenuata</option><option value="1">Spenta</option></select></div>
+        </div>
+        <button class="primary">Salva</button>
+      </form>
+      <div class="card">
+        <div style="font-weight:700;margin-bottom:6px">🕘 Ascolti recenti</div>
+        <div id="historyList" class="hint"></div>
+      </div>
       <div class="card">
         <div style="font-weight:700;margin-bottom:6px">💾 Backup sul NAS</div>
         <p id="backupInfo" class="hint" style="margin:0 0 8px"></p>
@@ -298,6 +338,10 @@
         <div class="segmented" id="langSeg">
           <button data-lang="it">Italiano</button><button data-lang="de">Deutsch</button><button data-lang="fr">Français</button><button data-lang="en">English</button>
         </div>
+      </div>
+      <div class="card">
+        <label style="display:flex;gap:10px;align-items:center;font-weight:700;font-size:15px;color:var(--ink)"><input type="checkbox" id="kidsLock" style="width:22px;height:22px"> 🔒 Blocco bambini</label>
+        <p class="hint" style="margin:6px 0 0">Su questo telefono il menu si apre solo tenendo premuto ☰ per 2 secondi.</p>
       </div>
       <form class="card pwform" data-kind="admin">
         <div style="font-weight:700;margin-bottom:4px">🔑 Parola segreta della famiglia</div>
@@ -342,7 +386,7 @@
   <button data-tab="menu"><span>☰</span>Altro</button>
 </nav>
 <div id="toast" class="toast"></div>
-<script src="/static/i18n.js?v=5"></script>
-<script src="/static/app.js?v=5"></script>
+<script src="/static/i18n.js?v=6"></script>
+<script src="/static/app.js?v=6"></script>
 </body>
 </html>

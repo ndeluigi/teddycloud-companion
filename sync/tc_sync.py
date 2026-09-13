@@ -371,6 +371,10 @@ def parse_box_log(state):
             d = downloads.setdefault(uid, {})
             d["downloaded"] = ts
             box["last_tag"] = {"uid": uid, "at": ts}
+            hist = state.setdefault("history", [])
+            if not hist or hist[-1]["uid"] != uid or ts - hist[-1]["at"] > 120:
+                hist.append({"uid": uid, "at": ts})
+                del hist[:-300]
     if last_ts:
         state["log_cursor"] = last_ts   # docker --since accepts RFC3339
     return state
@@ -392,6 +396,30 @@ def box_info(state, figs):
         f = figs.get(lt["uid"])
         lt["title"] = f["title"] if f else None
     return box
+
+
+def led_schedule(state, storie):
+    """Bedtime schedule from the app (settings.led_schedule): set the LED mode teddycloud hands
+    to the box at its next contact. 0 on, 1 off, 2 dimmed."""
+    sched = (storie.get("settings") or {}).get("led_schedule") or {}
+    box = state.get("box") or {}
+    if not sched.get("enabled") or not box.get("id"):
+        return
+    now = time.strftime("%H:%M")
+    off_at, on_at = sched.get("off_at", "19:00"), sched.get("on_at", "07:00")
+    night = (now >= off_at or now < on_at) if off_at > on_at else (off_at <= now < on_at)
+    desired = int(sched.get("mode", 2)) if night else 0
+    if box.get("led") == desired:
+        return
+    try:
+        req = urllib.request.Request(f"{TC_API}/api/settings/set/toniebox.led?overlay={box['id']}",
+                                     data=str(desired).encode(), method="POST",
+                                     headers={"Content-Type": "text/plain"})
+        urllib.request.urlopen(req, timeout=15).read()
+        box["led"] = desired
+        log(f"led schedule: {'night' if night else 'day'} -> led={desired}")
+    except Exception as e:
+        log(f"WARN led schedule: {e}")
 
 
 def download_status(state, figs, recs):
@@ -726,6 +754,7 @@ def main():
     # ---- state for the app -------------------------------------------------------------
     parse_box_log(state)
     state["box"] = box_info(state, figs)
+    led_schedule(state, storie)
     state["status"] = download_status(state, figs, recs)
     state["versions"] = versions_info(figs, recs)
     state["box_unknown"] = unknown_tags(figs, recs)

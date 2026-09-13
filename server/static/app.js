@@ -15,6 +15,17 @@ let nativeState = { connected: false, playing: false, position: 0, duration: 0, 
 const LANG_NAMES = { "it-it": "Italiano", "de-ch": "Svizzero tedesco", "de-de": "Tedesco", "fr-fr": "Francese", "en-gb": "Inglese", "en-us": "Inglese" };
 const LOCALE = I18N_LOCALE[LANG] || "it-CH";
 let currentUid = null;
+// per-phone state
+const store = {
+  get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (_) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (_) { /* ignore */ } },
+};
+let resumeMap = store.get("storie_resume", {});        // uid -> {pos, dur}
+let phoneHistory = store.get("storie_phone_history", []);
+let offlineSet = new Set();                            // uids available offline on this phone
+let offlineProgress = {};                              // uid -> percent while downloading
+const KIDS_LOCK = !!store.get("storie_kidslock", false);
+document.body.classList.toggle("kidslock", KIDS_LOCK);
 
 function toast(msg) {
   const t = $("toast");
@@ -68,13 +79,17 @@ async function playUid(rawUid, { fromScan = false } = {}) {
     currentUid = uid;
     const lib = library.find((x) => x.uid === uid) || {};
     showNow({ uid, title: data.title, has_cover: data.has_cover, chapters: lib.chapters || [] });
+    phoneHistory.push({ uid, at: Math.floor(Date.now() / 1000) }); phoneHistory = phoneHistory.slice(-100); store.set("storie_phone_history", phoneHistory);
+    const rp = resumeMap[uid];
+    const startAt = rp && rp.pos > 10 && (!rp.dur || rp.pos < rp.dur - 15) ? Math.floor(rp.pos) : (lib.skip_seconds || 0);
+    $("restart").hidden = !(rp && startAt > (lib.skip_seconds || 0));
     if (NATIVE) {
-      StorieApp.play(`${location.origin}/stream/${uid}`, data.title, data.has_cover ? `${location.origin}/cover/${uid}` : "", uid, lib.skip_seconds || 0);
+      StorieApp.play(`${location.origin}/stream/${uid}`, data.title, data.has_cover ? `${location.origin}/cover/${uid}` : "", uid, startAt);
       setStatus(t("In riproduzione: {t}", { t: data.title }));
       return;
     }
     player.src = `/stream/${uid}`;   // same-origin: always HTTPS, no mixed content
-    if (lib.skip_seconds) player.addEventListener("loadedmetadata", () => { player.currentTime = lib.skip_seconds; }, { once: true });
+    if (startAt) player.addEventListener("loadedmetadata", () => { player.currentTime = startAt; }, { once: true });
     try {
       await player.play();
       setStatus(t("In riproduzione: {t}", { t: data.title }));
@@ -130,11 +145,25 @@ $("back").addEventListener("click", () => { seekTo(Math.max(0, pos() - 15)); });
 $("fwd").addEventListener("click", () => { seekTo(Math.min(dur(), pos() + 15)); });
 player.addEventListener("play", () => { $("play").textContent = "❚❚"; });
 player.addEventListener("pause", () => { $("play").textContent = "▶"; });
-player.addEventListener("ended", () => { $("play").textContent = "▶"; setStatus(t("Fine della storia. Scegline un'altra!")); });
+player.addEventListener("ended", () => { $("play").textContent = "▶"; setStatus(t("Fine della storia. Scegline un'altra!")); if (currentUid) { delete resumeMap[currentUid]; store.set("storie_resume", resumeMap); } });
 player.addEventListener("timeupdate", () => {
   if (!seeking && player.duration) $("seek").value = Math.round(player.currentTime / player.duration * 1000);
   $("tCur").textContent = fmtTime(player.currentTime);
   highlightChapter();
+  rememberPosition(player.currentTime, player.duration || 0);
+});
+let lastRemember = 0;
+function rememberPosition(pos, dur) {
+  if (!currentUid || Date.now() - lastRemember < 5000) return;
+  lastRemember = Date.now();
+  if (dur && pos > dur - 15) { delete resumeMap[currentUid]; } else if (pos > 10) { resumeMap[currentUid] = { pos, dur }; }
+  store.set("storie_resume", resumeMap);
+}
+$("restart").addEventListener("click", () => {
+  const lib = library.find((x) => x.uid === currentUid) || {};
+  delete resumeMap[currentUid]; store.set("storie_resume", resumeMap);
+  seekTo(lib.skip_seconds || 0); $("restart").hidden = true;
+  if (NATIVE) StorieApp.resume(); else player.play().catch(() => {});
 });
 player.addEventListener("durationchange", () => { $("tDur").textContent = fmtTime(player.duration); });
 let seeking = false;
@@ -151,6 +180,8 @@ if (NATIVE) {
     $("tCur").textContent = fmtTime(s.position);
     $("tDur").textContent = fmtTime(s.duration);
     highlightChapter();
+    if (s.playing) rememberPosition(s.position, s.duration);
+    if (s.ended && currentUid) { delete resumeMap[currentUid]; store.set("storie_resume", resumeMap); }
     if (s.uid && s.uid !== currentUid) {   // resumed from the notification after the page reloaded
       const f = library.find((x) => x.uid === s.uid);
       if (f) { currentUid = s.uid; showNow(f); }
@@ -158,6 +189,36 @@ if (NATIVE) {
     if (s.ended && $("play").dataset.ended !== s.uid) { $("play").dataset.ended = s.uid; setStatus(t("Fine della storia. Scegline un'altra!")); }
   }, 400);
 }
+
+// ---- sleep timer -----------------------------------------------------------
+let sleepUntil = 0, sleepChapterEnd = 0;
+function isPlaying() { return NATIVE ? nativeState.playing : !player.paused; }
+function pauseAll() { if (NATIVE) StorieApp.pause(); else player.pause(); }
+function setSleep(kind) {
+  sleepUntil = 0; sleepChapterEnd = 0;
+  if (kind === "chapter") {
+    const next = currentChapters.find((s) => s > pos() + 2);
+    sleepChapterEnd = next || Infinity;
+  } else if (Number(kind) > 0) {
+    sleepUntil = Date.now() + Number(kind) * 60000;
+  }
+  $("sleepMenu").hidden = true;
+  renderSleep();
+}
+function renderSleep() {
+  const el = $("sleepInfo");
+  if (sleepUntil) el.textContent = "💤 " + t("{n} min", { n: Math.max(1, Math.ceil((sleepUntil - Date.now()) / 60000)) });
+  else if (sleepChapterEnd) el.textContent = "💤 " + t("fine del capitolo");
+  else el.textContent = "";
+  $("sleep").classList.toggle("on", !!(sleepUntil || sleepChapterEnd));
+}
+$("sleep").addEventListener("click", () => { $("sleepMenu").hidden = !$("sleepMenu").hidden; });
+$("sleepMenu").querySelectorAll("button").forEach((b) => b.addEventListener("click", () => setSleep(b.dataset.min)));
+setInterval(() => {
+  if (sleepUntil && Date.now() >= sleepUntil) { pauseAll(); sleepUntil = 0; toast(t("💤 Timer: buonanotte")); }
+  if (sleepChapterEnd && isPlaying() && (pos() >= sleepChapterEnd || (NATIVE ? nativeState.ended : player.ended))) { pauseAll(); sleepChapterEnd = 0; toast(t("💤 Timer: buonanotte")); }
+  renderSleep();
+}, 1000);
 
 if ("mediaSession" in navigator) {
   navigator.mediaSession.setActionHandler("play", () => player.play());
@@ -185,7 +246,7 @@ async function loadLibrary() {
     document.body.classList.toggle("guest", GUEST);
     $("guestLogout").hidden = !GUEST;
     $("guestFoot").hidden = !GUEST;
-    meta = { box: data.box || {}, box_unknown: data.box_unknown || [], backup: data.backup || {} };
+    meta = { box: data.box || {}, box_unknown: data.box_unknown || [], backup: data.backup || {}, history: data.history || [], settings: data.settings || {} };
     renderBoxBar();
     renderNameBanner();
     const grid = $("grid");
@@ -195,7 +256,10 @@ async function loadLibrary() {
       const b = document.createElement("button");
       b.className = "fig" + (f.uid === currentUid ? " playing" : "");
       b.dataset.uid = f.uid;
-      b.innerHTML = `<div class="art">${artHtml(f, false)}</div><span>${escapeHtml(f.title)}</span>`;
+      const rp = resumeMap[f.uid];
+      const prog = rp && rp.dur ? `<i class="prog" style="width:${Math.min(100, Math.round(rp.pos / rp.dur * 100))}%"></i>` : "";
+      const off = offlineSet.has(f.uid) ? `<span class="off" title="${t("Disponibile senza internet")}">📱</span>` : "";
+      b.innerHTML = `<div class="art">${artHtml(f, false)}${prog}${off}</div><span>${escapeHtml(f.title)}</span>`;
       b.onclick = () => playUid(f.uid);
       grid.appendChild(b);
     }
@@ -270,8 +334,9 @@ function showPanel(name) {
   if (name === "settings") $("langSeg").querySelectorAll("button").forEach((b) => b.classList.toggle("on", b.dataset.lang === LANG));
   if (name !== "coins") nfcTarget = null;
 }
-function openSheet(panel = "menu") {
+function openSheet(panel = "menu", force = false) {
   if (GUEST) return;
+  if (KIDS_LOCK && !force) { toast(t("Tieni premuto ☰ per 2 secondi per aprire il menu")); return; }
   showPanel(panel);
   $("sheet").classList.add("show");
   $("overlay").classList.add("show");
@@ -289,10 +354,14 @@ function setTab(name) {
   document.querySelectorAll("#tabbar button").forEach((b) => b.classList.toggle("on", b.dataset.tab === active));
 }
 document.querySelectorAll("#tabbar button").forEach((b) => b.addEventListener("click", () => {
-  const t = b.dataset.tab;
-  if (t === "home") { closeSheet(); window.scrollTo({ top: 0, behavior: "smooth" }); }
-  else openSheet(t);
+  const tab = b.dataset.tab;
+  if (tab === "home") { closeSheet(); window.scrollTo({ top: 0, behavior: "smooth" }); }
+  else if (KIDS_LOCK && pressTimer === null && tab === "menu") { /* handled by long press */ openSheet("menu"); }
+  else openSheet(tab);
 }));
+longPress(document.querySelector('#tabbar button[data-tab="menu"]'));
+$("kidsLock").checked = KIDS_LOCK;
+$("kidsLock").addEventListener("change", () => { store.set("storie_kidslock", $("kidsLock").checked); toast($("kidsLock").checked ? t("Blocco bambini attivo") : t("Blocco bambini disattivato")); setTimeout(() => location.reload(), 600); });
 // Android back button: close the sheet first (the app calls this before browser history)
 window.StorieBack = () => {
   if ($("sheet").classList.contains("show")) {
@@ -302,6 +371,13 @@ window.StorieBack = () => {
   return false;
 };
 $("menuBtn").addEventListener("click", () => openSheet("menu"));
+// kids lock: a 2-second press on ☰ (or the "Altro" tab) opens the menu anyway
+let pressTimer = null;
+function longPress(el) {
+  el.addEventListener("pointerdown", () => { if (!KIDS_LOCK) return; pressTimer = setTimeout(() => { pressTimer = null; openSheet("menu", true); }, 2000); });
+  ["pointerup", "pointerleave", "pointercancel"].forEach((ev) => el.addEventListener(ev, () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } }));
+}
+longPress($("menuBtn"));
 $("sheetClose").addEventListener("click", closeSheet);
 $("overlay").addEventListener("click", closeSheet);
 $("sheetBack").addEventListener("click", () => showPanel("menu"));
@@ -312,8 +388,9 @@ $("enrollForm").addEventListener("submit", async (ev) => {
   ev.preventDefault();
   const uid = normUid($("fUid").value);
   if (!uid) { toast(t("Inserisci il codice")); return; }
-  const audio = $("fAudio").files[0];
-  if (!audio) { toast(t("Scegli un file audio")); return; }
+  const ext = recordedBlob && recordedBlob.type.includes("ogg") ? "ogg" : recordedBlob && recordedBlob.type.includes("mp4") ? "m4a" : "webm";
+  const audio = $("fAudio").files[0] || (recordedBlob && new File([recordedBlob], `registrazione.${ext}`, { type: recordedBlob.type }));
+  if (!audio) { toast(t("Scegli un file audio o registra una storia")); return; }
   const fd = new FormData();
   fd.append("uid", uid);
   fd.append("title", $("fTitle").value.trim());
@@ -325,7 +402,7 @@ $("enrollForm").addEventListener("submit", async (ev) => {
     const r = await fetch("/enroll", { method: "POST", body: fd });
     if (!r.ok) { const d = await r.json().catch(() => ({})); toast(d.detail || t("Caricamento fallito ({s})", { s: r.status })); return; }
     toast(t("Salvata! La Toniebox la riceverà tra qualche minuto."));
-    $("enrollForm").reset();
+    $("enrollForm").reset(); recordedBlob = null; $("recReady").hidden = true; $("recPreview").hidden = true; $("fAudio").required = true; $("recTime").textContent = "";
     closeSheet();
     await loadLibrary();
     playUid(uid);
@@ -579,7 +656,10 @@ function renderTravel() {
     items.map((f) => `<div class="card travel"><div class="thumb">${artHtml(f, false)}</div>
       <div style="flex:1;min-width:0"><div style="font-weight:700">${escapeHtml(f.title)}</div>
         <div class="hint">${f.kind === "coin" ? t("gettone") : t("statuina")} · ${f.uid.replace(/(..)/g, "$1 ").trim()}</div></div>
-      <div>${f.downloaded ? `<span class="badge ok">${t("✓ sulla box")}</span>` : `<span class="badge pending">${t("da appoggiare")}</span>`}</div></div>`).join("");
+      <div style="display:grid;gap:6px;justify-items:end">${f.downloaded ? `<span class="badge ok">${t("✓ sulla box")}</span>` : `<span class="badge pending">${t("da appoggiare")}</span>`}
+        ${f.kind === "coin" ? "" : offlineSet.has(f.uid) ? `<button class="ghost small" data-off-remove="${f.uid}">📱 ✓ ${t("sul telefono")}</button>` : offlineProgress[f.uid] !== undefined ? `<span class="badge pending">📱 ${offlineProgress[f.uid]}%</span>` : `<button class="ghost small" data-off-add="${f.uid}">📱 ${t("Scarica sul telefono")}</button>`}</div></div>`).join("");
+  box.querySelectorAll("button[data-off-add]").forEach((b) => b.addEventListener("click", () => offlineAdd(b.dataset.offAdd)));
+  box.querySelectorAll("button[data-off-remove]").forEach((b) => b.addEventListener("click", () => offlineRemove(b.dataset.offRemove)));
 }
 function renderBoxPanel() {
   const b = meta.box || {};
@@ -589,6 +669,7 @@ function renderBoxPanel() {
     ${b.online ? t("In contatto con teddycloud") : t("Non in contatto")} · ${t("ultimo contatto: {a}", { a: ago(b.last_seen) })}</p>
     ${b.last_tag && b.last_tag.title ? `<p class="hint" style="margin:4px 0 0">${t("Ultima storia sulla box: {t} ({a})", { t: escapeHtml(b.last_tag.title), a: ago(b.last_tag.at) })}</p>` : ""}`;
   $("ledSeg").querySelectorAll("button").forEach((x) => x.classList.toggle("on", String(b.led ?? 0) === x.dataset.led));
+  renderSchedule(); renderHistory();
   const bk = meta.backup || {};
   $("backupInfo").textContent = bk.running ? t("Backup in corso…") :
     bk.last ? t("Ultimo backup: {d} ({s})", { d: new Date(bk.last * 1000).toLocaleString(LOCALE), s: (bk.size || "") + (bk.status === "ok" ? "" : " · " + bk.status) }) : t("Nessun backup ancora. Ogni notte alle 3:30 parte da solo.");
@@ -632,6 +713,97 @@ document.querySelectorAll("form.pwform").forEach((form) => form.addEventListener
     toast(kind === "admin" ? t("Parola segreta cambiata") : (d.guest_enabled ? t("Parola segreta degli amici cambiata: comunicala agli amici") : t("Accesso degli amici disattivato")));
   } catch (_) { toast(t("Errore di rete")); }
 }));
+
+// ---- offline stories -----------------------------------------------------------
+function swCall(msg) {
+  return new Promise((resolve) => {
+    if (!navigator.serviceWorker || !navigator.serviceWorker.controller) { resolve({}); return; }
+    const ch = new MessageChannel();
+    ch.port1.onmessage = (e) => resolve(e.data || {});
+    navigator.serviceWorker.controller.postMessage(msg, [ch.port2]);
+  });
+}
+async function refreshOffline() {
+  try {
+    if (NATIVE) {
+      const o = JSON.parse(StorieApp.offline());
+      offlineSet = new Set(o.uids || []); offlineProgress = o.progress || {};
+    } else {
+      const o = await swCall({ type: "offline-list" });
+      offlineSet = new Set(o.uids || []);
+    }
+  } catch (_) { /* ignore */ }
+}
+async function offlineAdd(uid) {
+  const f = library.find((x) => x.uid === uid) || {};
+  toast(t("Scarico «{t}» sul telefono…", { t: f.title || uid }));
+  if (NATIVE) { StorieApp.download(uid, `${location.origin}/stream/${uid}`, f.title || uid); offlineProgress[uid] = 0; renderTravel(); return; }
+  offlineProgress[uid] = 0; renderTravel();
+  const r = await swCall({ type: "offline-add", uid });
+  delete offlineProgress[uid];
+  toast(r.ok ? t("Salvata sul telefono") : t("Scaricamento fallito: {e}", { e: r.error || "?" }));
+  await refreshOffline(); renderTravel(); loadLibrary();
+}
+async function offlineRemove(uid) {
+  if (NATIVE) StorieApp.removeOffline(uid); else await swCall({ type: "offline-remove", uid });
+  await refreshOffline(); renderTravel(); loadLibrary();
+}
+refreshOffline().then(() => loadLibrary());
+if (NATIVE) setInterval(async () => { const before = JSON.stringify([...offlineSet]) + JSON.stringify(offlineProgress); await refreshOffline(); if (JSON.stringify([...offlineSet]) + JSON.stringify(offlineProgress) !== before && $("panel-viaggio").classList.contains("show")) renderTravel(); }, 1500);
+
+// ---- listening history + bedtime schedule (Toniebox panel) --------------------------
+function titleOf(uid) { const f = library.find((x) => x.uid === uid); return f ? f.title : uid; }
+function renderHistory() {
+  const box = $("historyList");
+  const rows = [...(meta.history || []).map((h) => ({ ...h, where: "box" })), ...phoneHistory.map((h) => ({ ...h, where: "phone" }))]
+    .sort((a, b) => b.at - a.at).slice(0, 40);
+  if (!rows.length) { box.textContent = t("Nessun ascolto registrato."); return; }
+  let day = "";
+  box.innerHTML = rows.map((h) => {
+    const d = new Date(h.at * 1000); const ds = d.toLocaleDateString(LOCALE, { weekday: "short", day: "numeric", month: "short" });
+    const head = ds !== day ? `<div style="font-weight:700;margin:8px 0 2px">${ds}</div>` : ""; day = ds;
+    return head + `<div class="hist"><span>${h.where === "box" ? "📦" : "📱"} ${escapeHtml(titleOf(h.uid))}</span><span>${d.toLocaleTimeString(LOCALE, { hour: "2-digit", minute: "2-digit" })}</span></div>`;
+  }).join("");
+}
+function renderSchedule() {
+  const s = (meta.settings || {}).led_schedule || {};
+  const f = $("schedForm");
+  f.enabled.checked = !!s.enabled; f.off_at.value = s.off_at || "19:00"; f.on_at.value = s.on_at || "07:00"; f.mode.value = String(s.mode || 2);
+}
+$("schedForm").addEventListener("submit", async (ev) => {
+  ev.preventDefault();
+  const f = $("schedForm"); const fd = new FormData();
+  fd.append("enabled", f.enabled.checked ? "1" : "0"); fd.append("off_at", f.off_at.value); fd.append("on_at", f.on_at.value); fd.append("mode", f.mode.value);
+  const r = await fetch("/box/schedule", { method: "POST", body: fd });
+  toast(r.ok ? t("Orario salvato: la Toniebox lo applica al prossimo contatto") : t("Errore"));
+  await loadLibrary();
+});
+
+// ---- record a story (MediaRecorder) ---------------------------------------------------
+let recorder = null, recChunks = [], recStart = 0, recTimer = null, recordedBlob = null;
+$("recBtn").addEventListener("click", async () => {
+  if (recorder && recorder.state === "recording") { recorder.stop(); return; }
+  if (!navigator.mediaDevices || !window.MediaRecorder) { toast(t("Questo telefono non può registrare dal browser")); return; }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mime = ["audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus", "audio/mp4"].find((m) => MediaRecorder.isTypeSupported(m)) || "";
+    recorder = new MediaRecorder(stream, mime ? { mimeType: mime, audioBitsPerSecond: 64000 } : undefined);
+    recChunks = []; recordedBlob = null; $("recReady").hidden = true; $("recPreview").hidden = true;
+    recorder.ondataavailable = (e) => { if (e.data.size) recChunks.push(e.data); };
+    recorder.onstop = () => {
+      stream.getTracks().forEach((tr) => tr.stop());
+      clearInterval(recTimer);
+      recordedBlob = new Blob(recChunks, { type: recorder.mimeType || "audio/webm" });
+      $("recPreview").src = URL.createObjectURL(recordedBlob); $("recPreview").hidden = false;
+      $("recReady").hidden = false; $("fAudio").required = false;
+      $("recBtn").textContent = t("● Registra di nuovo"); $("recBtn").classList.remove("recording");
+    };
+    recorder.start(1000);
+    recStart = Date.now();
+    $("recBtn").textContent = t("■ Ferma"); $("recBtn").classList.add("recording");
+    recTimer = setInterval(() => { $("recTime").textContent = "🔴 " + fmtTime((Date.now() - recStart) / 1000); }, 500);
+  } catch (e) { toast(t("Microfono non disponibile: {e}", { e: e.message })); }
+});
 
 // manual UID
 $("uidForm").addEventListener("submit", (ev) => { ev.preventDefault(); closeSheet(); playUid($("mUid").value); });

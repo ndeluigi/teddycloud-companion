@@ -14,6 +14,8 @@ import android.os.Handler
 import android.os.Looper
 import android.webkit.CookieManager
 import android.webkit.JavascriptInterface
+import android.webkit.PermissionRequest
+import android.webkit.WebChromeClient
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
@@ -44,6 +46,7 @@ class MainActivity : ComponentActivity(), NfcAdapter.ReaderCallback {
     private lateinit var web: WebView
     private var nfc: NfcAdapter? = null
     private var updateChecked = false
+    private var pendingMic: PermissionRequest? = null
     private val main = Handler(Looper.getMainLooper())
 
     private var controllerFuture: ListenableFuture<MediaController>? = null
@@ -81,6 +84,11 @@ class MainActivity : ComponentActivity(), NfcAdapter.ReaderCallback {
 
         @JavascriptInterface
         fun checkUpdate() { main.post { Updater.check(this@MainActivity, quiet = false) } }
+
+        // offline stories (files/offline/<uid>.opus)
+        @JavascriptInterface fun download(uid: String, url: String, title: String) { Offline.download(this@MainActivity, uid, url) }
+        @JavascriptInterface fun removeOffline(uid: String) { Offline.remove(this@MainActivity, uid) }
+        @JavascriptInterface fun offline(): String = Offline.status(this@MainActivity)
     }
 
     @SuppressLint("SetJavaScriptEnabled")
@@ -106,6 +114,19 @@ class MainActivity : ComponentActivity(), NfcAdapter.ReaderCallback {
         web.settings.mediaPlaybackRequiresUserGesture = false
         CookieManager.getInstance().setAcceptCookie(true)
         web.addJavascriptInterface(Bridge(), "StorieApp")
+        // "record a story": the page asks for the microphone through getUserMedia; grant it
+        // once Android's RECORD_AUDIO permission is there (asked on first use)
+        web.webChromeClient = object : WebChromeClient() {
+            override fun onPermissionRequest(request: PermissionRequest) {
+                if (!request.resources.contains(PermissionRequest.RESOURCE_AUDIO_CAPTURE)) { request.deny(); return }
+                if (ContextCompat.checkSelfPermission(this@MainActivity, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
+                    request.grant(arrayOf(PermissionRequest.RESOURCE_AUDIO_CAPTURE))
+                } else {
+                    pendingMic = request
+                    ActivityCompat.requestPermissions(this@MainActivity, arrayOf(Manifest.permission.RECORD_AUDIO), 2)
+                }
+            }
+        }
         web.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 applyInsets()          // a fresh document has no inline styles
@@ -139,6 +160,15 @@ class MainActivity : ComponentActivity(), NfcAdapter.ReaderCallback {
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1)
+        }
+    }
+
+    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 2) {
+            val ok = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
+            pendingMic?.let { if (ok) it.grant(arrayOf(PermissionRequest.RESOURCE_AUDIO_CAPTURE)) else it.deny() }
+            pendingMic = null
         }
     }
 
@@ -223,8 +253,9 @@ class MainActivity : ComponentActivity(), NfcAdapter.ReaderCallback {
 
     private fun playNative(url: String, title: String, cover: String, uid: String, skipSeconds: Int) {
         val c = controller ?: return
+        val local = Offline.fileFor(this, uid)          // downloaded for offline use?
         val item = MediaItem.Builder()
-            .setUri(url)
+            .setUri(if (local != null) Uri.fromFile(local) else Uri.parse(url))
             .setMediaId(uid)
             .setMediaMetadata(
                 MediaMetadata.Builder()
