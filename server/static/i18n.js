@@ -231,6 +231,10 @@ const I18N = {
     "Scarico «{t}» sul telefono…": "Lade «{t}» aufs Telefon…",
     "Salvata sul telefono": "Auf dem Telefon gespeichert",
     "Scaricamento fallito: {e}": "Download fehlgeschlagen: {e}",
+    "Guida": "Anleitung",
+    "📖 Guida": "📖 Anleitung",
+    "Come funziona l'app": "So funktioniert die App",
+    "Lingua, parole segrete, blocco bambini": "Sprache, geheime Wörter, Kindersicherung",
     "UID": "UID",
   },
   fr: {
@@ -455,6 +459,10 @@ const I18N = {
     "Scarico «{t}» sul telefono…": "Je télécharge « {t} » sur le téléphone…",
     "Salvata sul telefono": "Enregistrée sur le téléphone",
     "Scaricamento fallito: {e}": "Téléchargement échoué : {e}",
+    "Guida": "Guide",
+    "📖 Guida": "📖 Guide",
+    "Come funziona l'app": "Comment fonctionne l'app",
+    "Lingua, parole segrete, blocco bambini": "Langue, mots secrets, verrou enfants",
     "UID": "UID",
   },
   en: {
@@ -679,6 +687,10 @@ const I18N = {
     "Scarico «{t}» sul telefono…": "Downloading “{t}” to the phone…",
     "Salvata sul telefono": "Saved on the phone",
     "Scaricamento fallito: {e}": "Download failed: {e}",
+    "Guida": "Guide",
+    "📖 Guida": "📖 Guide",
+    "Come funziona l'app": "How the app works",
+    "Lingua, parole segrete, blocco bambini": "Language, secret words, kids lock",
     "UID": "UID",
   },
 };

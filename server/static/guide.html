@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0e7c86">
+<title>Guida</title>
+<style>
+  :root { --safetop:env(safe-area-inset-top); --safebot:env(safe-area-inset-bottom); --teal:#0e7c86; --bg:#f4f6f7; --card:#fff; --ink:#14202a; --muted:#6b7a82; --line:#d9e0e2; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif; background:var(--bg); color:var(--ink); }
+  header { position:sticky; top:0; z-index:5; background:var(--teal); color:#fff; padding:calc(12px + var(--safetop)) 14px 12px; display:flex; align-items:center; gap:10px; }
+  header h1 { font-size:20px; margin:0; font-weight:800; flex:1; }
+  header a { color:#fff; text-decoration:none; background:rgba(255,255,255,.16); width:42px; height:42px; border-radius:12px; display:grid; place-items:center; font-size:22px; }
+  main { padding:16px 16px calc(24px + var(--safebot)); max-width:640px; margin:0 auto; }
+  .langs { display:flex; gap:6px; margin-bottom:14px; }
+  .langs button { flex:1; border:1px solid var(--line); background:#fff; border-radius:999px; padding:7px 0; font:inherit; font-size:13px; font-weight:700; }
+  .langs button.on { background:var(--teal); color:#fff; border-color:var(--teal); }
+  details { background:var(--card); border-radius:16px; margin-bottom:10px; box-shadow:0 2px 8px rgba(0,0,0,.05); }
+  summary { padding:14px 16px; font-weight:800; font-size:16px; cursor:pointer; list-style:none; display:flex; gap:10px; align-items:center; }
+  summary::-webkit-details-marker { display:none; }
+  summary .ico { font-size:22px; }
+  summary::after { content:"›"; margin-left:auto; color:var(--muted); font-size:22px; transition:transform .15s; }
+  details[open] summary::after { transform:rotate(90deg); }
+  ul { margin:0; padding:0 16px 14px 36px; }
+  li { margin:0 0 10px; line-height:1.45; font-size:15px; }
+  .intro { color:var(--muted); font-size:14px; margin:0 0 14px; }
+</style>
+</head>
+<body>
+<header><h1 id="h">📖 Guida</h1><a href="/" aria-label="Chiudi">✕</a></header>
+<main>
+  <div class="langs" id="langs"><button data-lang="it">Italiano</button><button data-lang="de">Deutsch</button><button data-lang="fr">Français</button><button data-lang="en">English</button></div>
+  <p class="intro" id="intro"></p>
+  <div id="sections"></div>
+</main>
+<script src="/static/i18n.js?v=6"></script>
+<script src="/static/guide.js?v=1"></script>
+<script>
+  const TITLES = { it: "📖 Guida", de: "📖 Anleitung", fr: "📖 Guide", en: "📖 Guide" };
+  const INTRO = {
+    it: "Tutto quello che l'app sa fare, in breve. Tocca una sezione per aprirla.",
+    de: "Alles, was die App kann, in Kürze. Tippe einen Abschnitt an, um ihn zu öffnen.",
+    fr: "Tout ce que l'app sait faire, en bref. Touche une section pour l'ouvrir.",
+    en: "Everything the app can do, in short. Tap a section to open it.",
+  };
+  function render(lang) {
+    document.documentElement.lang = lang;
+    document.getElementById("h").textContent = TITLES[lang];
+    document.title = TITLES[lang].slice(2).trim();
+    document.getElementById("intro").textContent = INTRO[lang];
+    document.querySelectorAll("#langs button").forEach((b) => b.classList.toggle("on", b.dataset.lang === lang));
+    document.getElementById("sections").innerHTML = GUIDE.map((s, i) => `<details${i === 0 ? " open" : ""}><summary><span class="ico">${s.icon}</span>${s.title[lang]}</summary><ul>${s.items.map((it) => `<li>${it[lang]}</li>`).join("")}</ul></details>`).join("");
+  }
+  render(LANG);
+  document.querySelectorAll("#langs button").forEach((b) => b.addEventListener("click", () => {
+    try { localStorage.setItem("storie_lang", b.dataset.lang); } catch (_) {}
+    document.cookie = `storie_lang=${b.dataset.lang}; path=/; max-age=31536000; SameSite=Lax`;
+    render(b.dataset.lang);
+  }));
+</script>
+</body>
+</html>
