@@ -5,7 +5,7 @@ LAN_IF=eth0; LAN_SUBNET=192.168.0.0/24; LAN_GW=192.168.0.1; TC_IP=192.168.0.250
 TEDDYCLOUD_DIR=$HOME/teddycloud; DOCKER_NET=companion_net
 #
 # Networking:
-#   - ai_stack_ai_net (bridge, shared with the companion): web UI published on 8095 (http) / 8443 (https-admin).
+#   - ${DOCKER_NET} (bridge, shared with the companion): web UI published on 8095 (http) / 8443 (https-admin).
 #     LAN/Tailscale only — teddycloud has NO login, never put it on the public tunnel.
 #   - tonie_lan (macvlan on ${LAN_IF}): teddycloud gets its OWN LAN IP ${TC_IP} so it can
 #     own :443 for the Toniebox without fighting a reverse proxy that already holds the host's 80/443.

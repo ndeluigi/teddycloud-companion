@@ -10,7 +10,7 @@ let library = [];          // [{uid,title,has_cover,kind,chapters,...}]
 let meta = {};             // box, box_unknown, backup (from tc_sync's state, via /library)
 // Inside the Android app: window.StorieApp (NFC + background player); see android/README.md
 const NATIVE = !!window.StorieApp;
-let GUEST = false;         // "storie amici" session: play only, no menu
+let GUEST = false;         // guest session: play only, no menu
 let nativeState = { connected: false, playing: false, position: 0, duration: 0, uid: "", ended: false };
 const LANG_NAMES = { "it-it": "Italiano", "de-ch": "Svizzero tedesco", "de-de": "Tedesco", "fr-fr": "Francese", "en-gb": "Inglese", "en-us": "Inglese" };
 const LOCALE = I18N_LOCALE[LANG] || "it-CH";
