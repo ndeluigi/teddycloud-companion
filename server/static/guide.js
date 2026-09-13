@@ -184,4 +184,14 @@ const GUIDE = [
         en: "Without internet only stories downloaded to the phone work, and on the Toniebox the ones already downloaded. Open the app at least once with a connection after logging in." },
     ],
   },
+  {
+    icon: "ℹ️",
+    title: { it: "Nota", de: "Hinweis", fr: "Note", en: "Note" },
+    items: [
+      { it: "Progetto indipendente per hobby, non affiliato né approvato da tonies GmbH / Boxine. Toniebox, Tonie e Tonie creativa sono marchi dei rispettivi proprietari. L'app non contiene audio: riproduce solo le storie delle statuine che possiedi.",
+        de: "Unabhängiges Hobbyprojekt, weder mit tonies GmbH / Boxine verbunden noch von ihr unterstützt. Toniebox, Tonie und Kreativ-Tonie sind Marken ihrer Inhaber. Die App enthält keine Audiodateien: sie spielt nur die Geschichten der Figuren, die du besitzt.",
+        fr: "Projet indépendant de loisir, sans lien avec tonies GmbH / Boxine ni approuvé par elle. Toniebox, Tonie et Tonie créatif sont des marques de leurs propriétaires. L'app ne contient aucun audio : elle ne joue que les histoires des figurines que tu possèdes.",
+        en: "Independent hobby project, not affiliated with or endorsed by tonies GmbH / Boxine. Toniebox, Tonie and Creative Tonie are trademarks of their owners. The app contains no audio: it only plays the stories of the figurines you own." },
+    ],
+  },
 ];

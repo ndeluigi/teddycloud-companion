@@ -70,6 +70,10 @@
 - A story stays “to place” or does not start on the Toniebox: place it with the Toniebox on and on Wi-Fi, then hold the big ear for 3 seconds.
 - Without internet only stories downloaded to the phone work, and on the Toniebox the ones already downloaded. Open the app at least once with a connection after logging in.
 
+### ℹ️ Note
+
+- Independent hobby project, not affiliated with or endorsed by tonies GmbH / Boxine. Toniebox, Tonie and Creative Tonie are trademarks of their owners. The app contains no audio: it only plays the stories of the figurines you own.
+
 <a id="de"></a>
 
 ## Deutsch
@@ -135,6 +139,10 @@
 - Das Telefon liest eine Münze nicht mehr: normal nach dem ersten Auflegen auf die Toniebox. Nutze die Geschichte im Raster oder verknüpfe sie unter «Von der Toniebox gesehen».
 - Eine Geschichte bleibt «auflegen» oder startet nicht auf der Toniebox: mit eingeschalteter Toniebox im WLAN auflegen, dann das große Ohr 3 Sekunden drücken.
 - Ohne Internet laufen nur die aufs Telefon geladenen Geschichten und auf der Toniebox die bereits geladenen. Öffne die App nach der Anmeldung mindestens einmal mit Netz.
+
+### ℹ️ Hinweis
+
+- Unabhängiges Hobbyprojekt, weder mit tonies GmbH / Boxine verbunden noch von ihr unterstützt. Toniebox, Tonie und Kreativ-Tonie sind Marken ihrer Inhaber. Die App enthält keine Audiodateien: sie spielt nur die Geschichten der Figuren, die du besitzt.
 
 <a id="fr"></a>
 
@@ -202,6 +210,10 @@
 - Une histoire reste « à poser » ou ne démarre pas sur la Toniebox : pose-la avec la Toniebox allumée et en Wi-Fi, puis maintiens la grande oreille 3 secondes.
 - Sans internet, seules les histoires téléchargées sur le téléphone fonctionnent et, sur la Toniebox, celles déjà téléchargées. Ouvre l'app au moins une fois avec le réseau après la connexion.
 
+### ℹ️ Note
+
+- Projet indépendant de loisir, sans lien avec tonies GmbH / Boxine ni approuvé par elle. Toniebox, Tonie et Tonie créatif sont des marques de leurs propriétaires. L'app ne contient aucun audio : elle ne joue que les histoires des figurines que tu possèdes.
+
 <a id="it"></a>
 
 ## Italiano
@@ -267,3 +279,7 @@
 - Il telefono non legge più un gettone: normale dopo il primo passaggio sulla Toniebox. Usa la storia nella griglia, o collegalo da «Visti dalla Toniebox».
 - Una storia resta «da appoggiare» o non parte sulla Toniebox: appoggiala con la Toniebox accesa e in Wi-Fi, poi tieni premuto l'orecchio grande per 3 secondi.
 - Senza internet funzionano solo le storie scaricate sul telefono e, sulla Toniebox, quelle già scaricate. Apri l'app almeno una volta con la rete dopo l'accesso.
+
+### ℹ️ Nota
+
+- Progetto indipendente per hobby, non affiliato né approvato da tonies GmbH / Boxine. Toniebox, Tonie e Tonie creativa sono marchi dei rispettivi proprietari. L'app non contiene audio: riproduce solo le storie delle statuine che possiedi.

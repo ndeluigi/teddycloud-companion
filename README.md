@@ -6,6 +6,9 @@ Tonies into a family story player, and make the phone the front door of teddyclo
 everyday jobs — coins, uploads, "is everything on the box before we travel?", a night light
 switch — so nobody has to open teddycloud's own admin page.
 
+> Independent hobby project, not affiliated with or endorsed by tonies GmbH / Boxine. Toniebox,
+> Tonie and Creative‑Tonie are trademarks of their owners. No audio is included or accepted.
+
 ```
  phone (PWA / Android app)  ──HTTPS──▶  companion server (FastAPI, docker)
    tap a figurine / coin                 │  library.json + media/ (opus for the phone)
