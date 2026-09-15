@@ -832,6 +832,7 @@ async function renderUnknown() {
 
 // ---- boot -----------------------------------------------------------------
 
+document.title = t("Storie");
 $("about").textContent = `Storie · ${location.host}` + (NATIVE ? ` · app ${StorieApp.version()}` : "");
 if (IOS) {
   $("apkLink").hidden = true;

@@ -172,10 +172,10 @@ def _safe_next(nxt: str) -> str:
 
 
 _LOGIN_T = {
-    "it": ("Inserisci la parola segreta per ascoltare le storie.", "Parola segreta", "Entra", "Parola segreta sbagliata."),
-    "de": ("Gib das geheime Wort ein, um die Geschichten zu hören.", "Geheimes Wort", "Los", "Falsches geheimes Wort."),
-    "fr": ("Saisis le mot secret pour écouter les histoires.", "Mot secret", "Entrer", "Mot secret incorrect."),
-    "en": ("Enter the secret word to listen to the stories.", "Secret word", "Enter", "Wrong secret word."),
+    "it": ("Inserisci la parola segreta per ascoltare le storie.", "Parola segreta", "Entra", "Parola segreta sbagliata.", "Storie"),
+    "de": ("Gib das geheime Wort ein, um die Geschichten zu hören.", "Geheimes Wort", "Los", "Falsches geheimes Wort.", "Geschichten"),
+    "fr": ("Saisis le mot secret pour écouter les histoires.", "Mot secret", "Entrer", "Mot secret incorrect.", "Histoires"),
+    "en": ("Enter the secret word to listen to the stories.", "Secret word", "Enter", "Wrong secret word.", "Stories"),
 }
 _MSG_T = {
     "Storia non trovata.": {"de": "Geschichte nicht gefunden.", "fr": "Histoire introuvable.", "en": "Story not found."},
@@ -209,7 +209,7 @@ def _lang(request: Request) -> str:
 
 
 def _login_html(error: str = "", nxt: str = "/", lang: str = "it") -> str:
-    intro, placeholder, enter, _ = _LOGIN_T.get(lang, _LOGIN_T["it"])
+    intro, placeholder, enter, _, title = _LOGIN_T.get(lang, _LOGIN_T["it"])
     err = f'<p class="err">{error}</p>' if error else ""
     langs = " · ".join(
         (f"<b>{name}</b>" if code == lang else f'<a href="/login?lang={code}&next={quote(nxt, safe="")}">{name}</a>')
@@ -217,7 +217,7 @@ def _login_html(error: str = "", nxt: str = "/", lang: str = "it") -> str:
     return f"""<!doctype html><html lang=it><meta charset=utf-8>
 <meta name=viewport content="width=device-width,initial-scale=1"><meta name=theme-color content="#0e7c86">
 <link rel=manifest href="/manifest.webmanifest?v=3"><link rel=icon href="/static/icon-192.png?v=3">
-<title>Storie</title>
+<title>{title}</title>
 <style>body{{margin:0;min-height:100vh;display:grid;place-items:center;background:#0e7c86;
 font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif}}
 form{{background:#fff;border-radius:22px;padding:28px 24px;width:min(90vw,340px);box-shadow:0 10px 30px rgba(0,0,0,.25)}}
@@ -226,7 +226,7 @@ input{{width:100%;box-sizing:border-box;font:inherit;font-size:18px;padding:13px
 button{{width:100%;margin-top:12px;font:inherit;font-size:17px;font-weight:700;padding:14px;border:0;border-radius:12px;background:#0e7c86;color:#fff}}
 .err{{color:#c0392b;font-weight:600}}.langs{{margin:14px 0 0;font-size:13px;text-align:center}}.langs a{{color:#0e7c86;text-decoration:none}}</style>
 <form method=post action=/login>
-<h1>&#128218; Storie</h1><p>{intro}</p>{err}
+<h1>&#128218; {title}</h1><p>{intro}</p>{err}
 <input type=hidden name=next value="{nxt}">
 <input type=hidden name=lang value="{lang}">
 <input type=password name=password placeholder="{placeholder}" autofocus autocomplete=current-password required>

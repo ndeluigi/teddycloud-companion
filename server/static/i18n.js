@@ -3,7 +3,6 @@
 // Static markup is translated by walking text nodes (exact matches), dynamic strings through t().
 const I18N = {
   de: {
-    "Storie": "Storie",
     "Menu": "Menü",
     "Avvicina la statuina al telefono": "Figur ans Telefon halten",
     "Avvicina il gettone al telefono": "Münze ans Telefon halten",
@@ -245,10 +244,10 @@ const I18N = {
     "Su iPhone non c'è la lettura NFC dal browser: si toccano le storie nella griglia. La storia continua a schermo spento e si può scaricare per l'ascolto senza internet.": "Auf dem iPhone gibt es kein NFC im Browser: Geschichten werden im Raster angetippt. Die Geschichte läuft bei ausgeschaltetem Bildschirm weiter und kann für das Hören ohne Internet geladen werden.",
     "🍎 Aggiungi alla schermata Home": "🍎 Zum Home-Bildschirm hinzufügen",
     "Safari → Condividi → «Aggiungi alla schermata Home»": "Safari → Teilen → «Zum Home-Bildschirm»",
+    "📚 Storie": "📚 Geschichten",
     "UID": "UID",
   },
   fr: {
-    "Storie": "Storie",
     "Menu": "Menu",
     "Avvicina la statuina al telefono": "Approche la figurine du téléphone",
     "Avvicina il gettone al telefono": "Approche le jeton du téléphone",
@@ -483,10 +482,10 @@ const I18N = {
     "Su iPhone non c'è la lettura NFC dal browser: si toccano le storie nella griglia. La storia continua a schermo spento e si può scaricare per l'ascolto senza internet.": "Sur iPhone, pas de lecture NFC depuis le navigateur : on touche les histoires dans la grille. L'histoire continue écran éteint et peut être téléchargée pour l'écoute sans internet.",
     "🍎 Aggiungi alla schermata Home": "🍎 Ajouter à l'écran d'accueil",
     "Safari → Condividi → «Aggiungi alla schermata Home»": "Safari → Partager → « Sur l'écran d'accueil »",
+    "📚 Storie": "📚 Histoires",
     "UID": "UID",
   },
   en: {
-    "Storie": "Storie",
     "Menu": "Menu",
     "Avvicina la statuina al telefono": "Hold the figurine to the phone",
     "Avvicina il gettone al telefono": "Hold the coin to the phone",
@@ -721,6 +720,7 @@ const I18N = {
     "Su iPhone non c'è la lettura NFC dal browser: si toccano le storie nella griglia. La storia continua a schermo spento e si può scaricare per l'ascolto senza internet.": "On iPhone there is no NFC reading from the browser: tap the stories in the grid. The story keeps playing with the screen off and can be downloaded for listening without internet.",
     "🍎 Aggiungi alla schermata Home": "🍎 Add to the Home Screen",
     "Safari → Condividi → «Aggiungi alla schermata Home»": "Safari → Share → “Add to Home Screen”",
+    "📚 Storie": "📚 Stories",
     "UID": "UID",
   },
 };
