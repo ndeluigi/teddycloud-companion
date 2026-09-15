@@ -5,7 +5,7 @@
 # (place the Pocket Tonie on the box, pick the language in the dropdown). The cloud then
 # serves that version under a new audio-id.
 #
-# usage: tc_rip_lang.sh <contentDir e.g. EEDDCCBB> [<audioId to pin back afterwards>]
+# usage: tc_rip_lang.sh <contentDir e.g. 65EF4F2B> [<audioId to pin back afterwards>]
 # Needs tc_fetch.sh, tc_pin.sh and taf_ids.py next to it. TEDDYCLOUD_DIR defaults to ~/teddycloud.
 set -e
 here=$(cd "$(dirname "$0")" && pwd)

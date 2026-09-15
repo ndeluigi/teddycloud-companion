@@ -17,6 +17,7 @@
   :root { --teal:#0e7c86; --teal-d:#0a5f67; --bg:#f4f6f7; --card:#ffffff; --ink:#14202a; --muted:#6b7a82;
           --line:#d9e0e2; --accent:#ffb703; }
   * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  [hidden] { display:none !important; }   /* the hidden attribute must win over display rules */
   html, body { height:100%; }
   body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,system-ui,sans-serif;
          background:var(--bg); color:var(--ink); }
@@ -388,7 +389,7 @@
   <button data-tab="menu"><span>☰</span>Altro</button>
 </nav>
 <div id="toast" class="toast"></div>
-<script src="/static/i18n.js?v=6"></script>
-<script src="/static/app.js?v=6"></script>
+<script src="/static/i18n.js?v=7"></script>
+<script src="/static/app.js?v=7"></script>
 </body>
 </html>

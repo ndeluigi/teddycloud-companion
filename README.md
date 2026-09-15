@@ -46,6 +46,18 @@ switch — so nobody has to open teddycloud's own admin page.
 - New rips are announced with a "give it a name" banner; titles and covers flow back into
   teddycloud's `tonies.custom.json`, so both UIs show the same names and pictures.
 
+## Screenshots
+
+Demo data, English UI (the app also speaks German, French and Italian).
+
+| Home & player | Coins | Travel checklist | Toniebox |
+|---|---|---|---|
+| ![home](docs/screenshots/01-home.png) | ![coins](docs/screenshots/02-coins.png) | ![travel](docs/screenshots/03-travel.png) | ![toniebox](docs/screenshots/04-toniebox.png) |
+
+| Menu | Stories | Add / record | Guide |
+|---|---|---|---|
+| ![menu](docs/screenshots/05-menu.png) | ![stories](docs/screenshots/06-stories.png) | ![add](docs/screenshots/07-add.png) | ![guide](docs/screenshots/08-guide.png) |
+
 ## What you need
 
 - teddycloud running in Docker with your Toniebox connected to it (certificates extracted,
