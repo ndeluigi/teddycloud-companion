@@ -10,6 +10,8 @@ let library = [];          // [{uid,title,has_cover,kind,chapters,...}]
 let meta = {};             // box, box_unknown, backup (from tc_sync's state, via /library)
 // Inside the Android app: window.StorieApp (NFC + background player); see android/README.md
 const NATIVE = !!window.StorieApp;
+const IOS = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const STANDALONE = window.navigator.standalone === true || window.matchMedia("(display-mode: standalone)").matches;
 let GUEST = false;         // guest session: play only, no menu
 let nativeState = { connected: false, playing: false, position: 0, duration: 0, uid: "", ended: false };
 const LANG_NAMES = { "it-it": "Italiano", "de-ch": "Svizzero tedesco", "de-de": "Tedesco", "fr-fr": "Francese", "en-gb": "Inglese", "en-us": "Inglese" };
@@ -318,7 +320,7 @@ if (NATIVE) startNfc(); else if (!("NDEFReader" in window)) $("tap").hidden = tr
 
 // ---- menu sheet -----------------------------------------------------------
 
-const PANEL_TITLES = { menu: "Menu", add: "Aggiungi una storia", coins: "Gettoni", viaggio: "Pronti per il viaggio?", toniebox: "Toniebox", edit: "Storie", uid: "Riproduci un UID", unknown: "Statuine sconosciute", settings: "Impostazioni" };
+const PANEL_TITLES = { menu: "Menu", add: "Aggiungi una storia", coins: "Gettoni", viaggio: "Pronti per il viaggio?", toniebox: "Toniebox", edit: "Storie", uid: "Riproduci un UID", unknown: "Statuine sconosciute", settings: "Impostazioni", ios: "Installa su iPhone / iPad" };
 function showPanel(name) {
   document.querySelectorAll(".sheet .panel").forEach((p) => p.classList.remove("show"));
   (name === "menu" ? $("menu") : $(`panel-${name}`)).classList.add("show");
@@ -831,6 +833,13 @@ async function renderUnknown() {
 // ---- boot -----------------------------------------------------------------
 
 $("about").textContent = `Storie · ${location.host}` + (NATIVE ? ` · app ${StorieApp.version()}` : "");
+if (IOS) {
+  $("apkLink").hidden = true;
+  $("iosInstall").hidden = STANDALONE;
+  $("guestApk").hidden = true;
+  $("guestIos").hidden = STANDALONE;
+  $("guestIos").addEventListener("click", () => { alert(t("Safari → Condividi → «Aggiungi alla schermata Home»")); });
+}
 if (NATIVE) {
   $("apkLink").hidden = true;
   $("updateBtn").hidden = false;

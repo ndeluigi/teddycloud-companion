@@ -5,11 +5,11 @@
 //  - /stream/* and /cover/*: served from the OFFLINE cache when the story was downloaded for
 //    offline use (Range requests are honoured by slicing the cached body), else network
 //  - everything else (admin calls, login, APK) is never cached
-const CACHE = "storie-shell-v9";
+const CACHE = "storie-shell-v10";
 const OFFLINE = "storie-offline-v1";
 const SHELL = [
-  "/static/i18n.js?v=7",
-  "/static/app.js?v=7",
+  "/static/i18n.js?v=8",
+  "/static/app.js?v=8",
   "/manifest.webmanifest?v=3",
   "/static/icon-192.png?v=3",
   "/static/icon-512.png?v=3",

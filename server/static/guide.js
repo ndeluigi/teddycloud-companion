@@ -154,8 +154,12 @@ const GUIDE = [
   },
   {
     icon: "🤖",
-    title: { it: "App Android", de: "Android-App", fr: "App Android", en: "Android app" },
+    title: { it: "App Android e iPhone", de: "Android-App und iPhone", fr: "App Android et iPhone", en: "Android app and iPhone" },
     items: [
+      { it: "Su iPhone e iPad non serve un'app: in Safari tocca Condividi → «Aggiungi alla schermata Home». Storie si apre a schermo intero, continua a schermo spento e scarica le storie per l'ascolto senza internet. Manca solo la lettura NFC: si toccano le storie nella griglia.",
+        de: "Auf iPhone und iPad braucht es keine App: in Safari auf Teilen → «Zum Home-Bildschirm» tippen. Storie öffnet sich bildschirmfüllend, läuft bei ausgeschaltetem Bildschirm weiter und lädt Geschichten für das Hören ohne Internet. Nur NFC fehlt: Geschichten werden im Raster angetippt.",
+        fr: "Sur iPhone et iPad, pas besoin d'app : dans Safari, touche Partager → « Sur l'écran d'accueil ». Storie s'ouvre en plein écran, continue écran éteint et télécharge les histoires pour l'écoute sans internet. Il ne manque que le NFC : on touche les histoires dans la grille.",
+        en: "On iPhone and iPad no app is needed: in Safari tap Share → “Add to Home Screen”. Storie opens full screen, keeps playing with the screen off and downloads stories for listening without internet. Only NFC is missing: tap the stories in the grid." },
       { it: "Menu → Altro → «Scarica l'app Android» (una volta sola bisogna permettere a Chrome di installare app). L'app si aggiorna da sola: quando c'è una versione nuova lo chiede all'avvio; «Controlla aggiornamenti» lo fa subito.",
         de: "Menü → Mehr → «Android-App herunterladen» (einmalig muss Chrome Apps installieren dürfen). Die App aktualisiert sich selbst: bei einer neuen Version fragt sie beim Start; «Nach Updates suchen» prüft sofort.",
         fr: "Menu → Plus → « Télécharger l'app Android » (une seule fois, il faut autoriser Chrome à installer des apps). L'app se met à jour seule : quand une nouvelle version existe, elle le demande au lancement ; « Vérifier les mises à jour » le fait tout de suite.",

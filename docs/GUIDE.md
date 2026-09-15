@@ -59,8 +59,9 @@
 
 - With the friends' secret word you get listen-only mode: stories, player and NFC, no menu. At the bottom of the page: language, Android app and updates.
 
-### 🤖 Android app
+### 🤖 Android app and iPhone
 
+- On iPhone and iPad no app is needed: in Safari tap Share → “Add to Home Screen”. Storie opens full screen, keeps playing with the screen off and downloads stories for listening without internet. Only NFC is missing: tap the stories in the grid.
 - Menu → More → “Download the Android app” (once, allow Chrome to install apps). The app updates itself: when a new version exists it asks at launch; “Check for updates” does it right away.
 - Beyond the browser: NFC always on, playback with the screen off and lock-screen controls, stories saved inside the app, microphone for recording (asks permission the first time).
 
@@ -129,8 +130,9 @@
 
 - Mit dem geheimen Wort der Freunde öffnet sich der Nur-Zuhören-Modus: Geschichten, Player und NFC, ohne Menü. Unten auf der Seite: Sprache, Android-App und Updates.
 
-### 🤖 Android-App
+### 🤖 Android-App und iPhone
 
+- Auf iPhone und iPad braucht es keine App: in Safari auf Teilen → «Zum Home-Bildschirm» tippen. Storie öffnet sich bildschirmfüllend, läuft bei ausgeschaltetem Bildschirm weiter und lädt Geschichten für das Hören ohne Internet. Nur NFC fehlt: Geschichten werden im Raster angetippt.
 - Menü → Mehr → «Android-App herunterladen» (einmalig muss Chrome Apps installieren dürfen). Die App aktualisiert sich selbst: bei einer neuen Version fragt sie beim Start; «Nach Updates suchen» prüft sofort.
 - Mehr als im Browser: NFC immer an, Wiedergabe bei ausgeschaltetem Bildschirm mit Sperrbildschirm-Steuerung, in der App gespeicherte Geschichten, Mikrofon zum Aufnehmen (fragt beim ersten Mal nach Erlaubnis).
 
@@ -199,8 +201,9 @@
 
 - Avec le mot secret des amis, on entre en mode écoute seule : histoires, lecteur et NFC, sans menu. En bas de la page : langue, app Android et mises à jour.
 
-### 🤖 App Android
+### 🤖 App Android et iPhone
 
+- Sur iPhone et iPad, pas besoin d'app : dans Safari, touche Partager → « Sur l'écran d'accueil ». Storie s'ouvre en plein écran, continue écran éteint et télécharge les histoires pour l'écoute sans internet. Il ne manque que le NFC : on touche les histoires dans la grille.
 - Menu → Plus → « Télécharger l'app Android » (une seule fois, il faut autoriser Chrome à installer des apps). L'app se met à jour seule : quand une nouvelle version existe, elle le demande au lancement ; « Vérifier les mises à jour » le fait tout de suite.
 - En plus du navigateur : NFC toujours actif, lecture écran éteint avec commandes sur l'écran de verrouillage, histoires enregistrées dans l'app, micro pour enregistrer (demande la permission la première fois).
 
@@ -269,8 +272,9 @@
 
 - Con la parola segreta degli amici si entra in modalità solo ascolto: storie, lettore e NFC, senza menu. In fondo alla pagina: lingua, app Android e aggiornamenti.
 
-### 🤖 App Android
+### 🤖 App Android e iPhone
 
+- Su iPhone e iPad non serve un'app: in Safari tocca Condividi → «Aggiungi alla schermata Home». Storie si apre a schermo intero, continua a schermo spento e scarica le storie per l'ascolto senza internet. Manca solo la lettura NFC: si toccano le storie nella griglia.
 - Menu → Altro → «Scarica l'app Android» (una volta sola bisogna permettere a Chrome di installare app). L'app si aggiorna da sola: quando c'è una versione nuova lo chiede all'avvio; «Controlla aggiornamenti» lo fa subito.
 - In più rispetto al browser: NFC sempre attivo, riproduzione a schermo spento con comandi sulla schermata di blocco, storie salvate nell'app, microfono per registrare (chiede il permesso la prima volta).
 

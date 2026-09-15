@@ -67,7 +67,8 @@ Demo data, English UI (the app also speaks German, French and Italian).
   see teddycloud's data directory and its container.
 - HTTPS in front of the companion if you want it reachable from outside (any reverse proxy or
   tunnel; the login cookie is `Secure`).
-- For the Android app: a PC with the Android SDK (see `android/README.md`).
+- For the Android app: a PC with the Android SDK (see `android/README.md`). iPhone/iPad need no app:
+  Safari → Share → "Add to Home Screen" gives a full-screen web app (no NFC on iOS, tiles only).
 
 ## Quick start
 
