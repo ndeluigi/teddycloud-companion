@@ -527,13 +527,17 @@ def sync_records(storie, figs, recs):
         else:
             skip = int(f.get("skip_seconds") or 0)
         d, fn = uid_to_dir(uid)
+        # coins and app-managed stories show the story's own tonies.custom.json entry in teddycloud
+        model = None
+        if kind == "coin" or f.get("tc_source"):
+            model = f"storie-{(f.get('alias_of') if kind == 'coin' else uid).upper()}"
         if want:
             cur = rec["json"] if rec else {}
-            if cur.get("source") != want or not cur.get("nocloud") or int(cur.get("skip_seconds") or 0) != skip:
-                model = f"storie-{uid}" if kind != "coin" else (recs[f["alias_of"].upper()]["json"].get("tonie_model") or "")
+            if (cur.get("source") != want or not cur.get("nocloud") or int(cur.get("skip_seconds") or 0) != skip
+                    or (model and cur.get("tonie_model") != model)):
                 newrec = {"live": False, "nocloud": True, "source": want, "skip_seconds": skip, "cache": False,
                           "cloud_ruid": cur.get("cloud_ruid") or "", "cloud_auth": cur.get("cloud_auth") or "",
-                          "cloud_override": False, "tonie_model": cur.get("tonie_model") or model,
+                          "cloud_override": False, "tonie_model": model or cur.get("tonie_model") or "",
                           "hide": False, "claimed": False, "_version": 5}
                 write_record(d, fn, newrec)
                 log(f"{kind} {uid} -> {want} (record {d}/{fn})")
@@ -543,11 +547,14 @@ def sync_records(storie, figs, recs):
             if kind == "coin":
                 created.add(uid)
             new_state = "ok"
-        elif rec and int(rec["json"].get("skip_seconds") or 0) != skip:
+        elif rec and (int(rec["json"].get("skip_seconds") or 0) != skip
+                      or (model and rec["json"].get("tonie_model") != model)):
             newrec = dict(rec["json"])
             newrec["skip_seconds"] = skip
+            if model:
+                newrec["tonie_model"] = model
             write_record(d, fn, newrec)
-            log(f"{kind} {uid}: skip_seconds={skip}")
+            log(f"{kind} {uid}: skip_seconds={skip} tonie_model={newrec.get('tonie_model')}")
         if new_state and f.get("tc_state") != new_state:
             f["tc_state"] = new_state
             changed = True
