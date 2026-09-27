@@ -441,21 +441,68 @@ def download_status(state, figs, recs):
 
 
 # --------------------------------------------------------------------------- records
+def adopt_manual(uid, f, rec, recs, owner_of):
+    """The record was re-pointed by hand in the teddycloud web UI (its source is a library file
+    that is neither what storie wants nor what this job last wrote, see tc_written): make the
+    storie entry follow teddycloud instead of overwriting the record every minute.
+    - another storie story's file -> the tag becomes a coin of that story
+    - any other library file      -> the tag becomes a story of its own, named after the file
+    Returns True when the entry changed."""
+    if not rec or not rec["taf"] or not rec["json"].get("nocloud"):
+        return False
+    cur = rec["json"].get("source") or ""
+    written = f.get("tc_written")
+    if f.get("kind") == "coin":
+        a = recs.get((f.get("alias_of") or "").upper())
+        expect = a["json"].get("source") if a else None
+    else:
+        expect = f.get("tc_source")
+    if not written or not expect or cur in (expect, written):
+        return False
+    owner = owner_of.get(cur)
+    if owner and owner != uid:
+        f.update(kind="coin", alias_of=owner, tc_state="pending", tc_written=cur)
+        for k in ("tc_source", "file", "cover", "chapters", "chapters_of", "media_of", "version", "needs_title"):
+            f.pop(k, None)
+        log(f"{uid}: re-assigned in teddycloud to {cur} -> now a coin of {owner}")
+        return True
+    name = os.path.splitext(os.path.basename(cur))[0]
+    known = tonies_title(rec["audio_id"]) if name.isdigit() else None
+    title = name if not name.isdigit() else (known or f"Nuova storia {rec['audio_id']}")
+    f.update(kind="figurine", tc_source=cur, tc_written=cur, tc_state="ok", title=title,
+             file="", media_of="")
+    for k in ("alias_of", "cover", "chapters", "chapters_of", "version", "needs_title"):
+        f.pop(k, None)
+    if name.isdigit() and not known:
+        f["needs_title"] = True
+    log(f"{uid}: re-assigned in teddycloud to {cur} -> now the story '{title}'")
+    return True
+
+
 def sync_records(storie, figs, recs):
     """Mirror storie entries into teddycloud content records and report tc_state back.
     - coin      -> record pointing at the source story's TAF
     - figurine with tc_source (upload encoded by teddycloud, or a chosen language version)
                 -> record pointing at that TAF
     - figurine ripped by the box -> record already exists, just report "ok"
-    Records of the box's own rips are never rewritten except for skip_seconds."""
+    Records of the box's own rips are never rewritten except for skip_seconds.
+    A record re-pointed by hand in the teddycloud web UI is not fought: the storie entry
+    follows it (adopt_manual); tc_written remembers the source this job last wrote."""
     try:
         created = set(json.load(open(COINS_STATE)))
     except Exception:
         created = set()
     changed = False
+    # library file -> uid of the storie story whose record serves it
+    owner_of = {r["json"].get("source"): u for u, r in recs.items()
+                if u in figs and figs[u].get("kind", "figurine") != "coin" and r["taf"]}
     for uid, f in figs.items():
-        kind = f.get("kind", "figurine")
         rec = recs.get(uid)
+        if adopt_manual(uid, f, rec, recs, owner_of):
+            changed = True
+            if f.get("kind") != "coin":
+                created.discard(uid)
+        kind = f.get("kind", "figurine")
         want = None
         new_state = None
         if kind == "coin":
@@ -490,6 +537,9 @@ def sync_records(storie, figs, recs):
                           "hide": False, "claimed": False, "_version": 5}
                 write_record(d, fn, newrec)
                 log(f"{kind} {uid} -> {want} (record {d}/{fn})")
+            if f.get("tc_written") != want:
+                f["tc_written"] = want
+                changed = True
             if kind == "coin":
                 created.add(uid)
             new_state = "ok"
@@ -533,7 +583,8 @@ def sync_media_and_chapters(storie, figs, recs):
         src = rec["json"]["source"] if rec else None
         if not taf:
             continue
-        if f.get("version") and f.get("tc_source") and src == f["tc_source"] and f.get("media_of") != f["tc_source"]:
+        if (f.get("version") or "media_of" in f) and f.get("tc_source") and src == f["tc_source"] \
+                and f.get("media_of") != f["tc_source"]:
             out = tempfile.mktemp(suffix=".opus")
             try:
                 taf_to_opus(taf, out)

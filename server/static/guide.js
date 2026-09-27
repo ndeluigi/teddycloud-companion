@@ -70,6 +70,10 @@ const GUIDE = [
         de: "«Geschichte wechseln» und «Entfernen» aktualisieren auch die Toniebox. «Etiketten für die Münzen» druckt runde Aufkleber mit den Covern.",
         fr: "« Changer d'histoire » et « Supprimer » mettent aussi à jour la Toniebox. « Étiquettes pour les jetons » imprime des autocollants ronds avec les couvertures.",
         en: "“Change story” and “Remove” update the Toniebox too. “Labels for the coins” prints round stickers with the covers." },
+      { it: "Puoi cambiare la storia di un gettone anche nell'interfaccia di teddycloud: l'app se ne accorge entro un minuto e si adegua (un file che non è ancora una storia diventa una storia nuova con il nome del file).",
+        de: "Die Geschichte einer Münze kannst du auch in der teddycloud-Oberfläche ändern: die App merkt es innerhalb einer Minute und zieht nach (eine Datei, die noch keine Geschichte ist, wird zu einer neuen Geschichte mit dem Dateinamen).",
+        fr: "Tu peux aussi changer l'histoire d'un jeton dans l'interface de teddycloud : l'app s'en aperçoit en moins d'une minute et suit (un fichier qui n'est pas encore une histoire devient une nouvelle histoire portant le nom du fichier).",
+        en: "You can also change a coin's story in the teddycloud web UI: the app notices within a minute and follows (a file that is not a story yet becomes a new story named after the file)." },
     ],
   },
   {

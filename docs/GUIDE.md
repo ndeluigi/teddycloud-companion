@@ -29,6 +29,7 @@
 - Menu → Coins: 1) hold the coin to the phone, 2) pick the story, 3) put it on the Toniebox. The badge turns “Ready for the Toniebox” within a minute.
 - If the coin already went on the Toniebox, find it under “Seen by the Toniebox” and link it there.
 - “Change story” and “Remove” update the Toniebox too. “Labels for the coins” prints round stickers with the covers.
+- You can also change a coin's story in the teddycloud web UI: the app notices within a minute and follows (a file that is not a story yet becomes a new story named after the file).
 
 ### ➕ Adding stories
 
@@ -100,6 +101,7 @@
 - Menü → Münzen: 1) Münze ans Telefon halten, 2) Geschichte wählen, 3) auf die Toniebox legen. Der Hinweis wird innerhalb einer Minute «Bereit für die Toniebox».
 - War die Münze schon auf der Toniebox, findest du sie unter «Von der Toniebox gesehen» und verknüpfst sie dort.
 - «Geschichte wechseln» und «Entfernen» aktualisieren auch die Toniebox. «Etiketten für die Münzen» druckt runde Aufkleber mit den Covern.
+- Die Geschichte einer Münze kannst du auch in der teddycloud-Oberfläche ändern: die App merkt es innerhalb einer Minute und zieht nach (eine Datei, die noch keine Geschichte ist, wird zu einer neuen Geschichte mit dem Dateinamen).
 
 ### ➕ Geschichten hinzufügen
 
@@ -171,6 +173,7 @@
 - Menu → Jetons : 1) approche le jeton, 2) choisis l'histoire, 3) pose-le sur la Toniebox. Le badge devient « Prêt pour la Toniebox » en moins d'une minute.
 - Si le jeton est déjà passé par la Toniebox, tu le trouves dans « Vus par la Toniebox » et tu l'associes de là.
 - « Changer d'histoire » et « Supprimer » mettent aussi à jour la Toniebox. « Étiquettes pour les jetons » imprime des autocollants ronds avec les couvertures.
+- Tu peux aussi changer l'histoire d'un jeton dans l'interface de teddycloud : l'app s'en aperçoit en moins d'une minute et suit (un fichier qui n'est pas encore une histoire devient une nouvelle histoire portant le nom du fichier).
 
 ### ➕ Ajouter des histoires
 
@@ -242,6 +245,7 @@
 - Menu → Gettoni: 1) avvicina il gettone, 2) scegli la storia, 3) appoggialo sulla Toniebox. Il badge diventa «Pronto per la Toniebox» entro un minuto.
 - Se il gettone è già passato dalla Toniebox, lo trovi in «Visti dalla Toniebox» e lo colleghi da lì.
 - «Cambia storia» e «Rimuovi» aggiornano anche la Toniebox. «Etichette per i gettoni» stampa adesivi rotondi con le copertine.
+- Puoi cambiare la storia di un gettone anche nell'interfaccia di teddycloud: l'app se ne accorge entro un minuto e si adegua (un file che non è ancora una storia diventa una storia nuova con il nome del file).
 
 ### ➕ Aggiungere storie
 
