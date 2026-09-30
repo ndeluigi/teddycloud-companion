@@ -90,6 +90,7 @@ STORIE_MEDIA = f"{STORIE_DIR}/media"
 STATE_DIR = f"{STORIE_DIR}/state"
 STATE_FILE = f"{STATE_DIR}/tc_state.json"
 VERSIONS_FILE = f"{STORIE_DIR}/versions.json"
+PIN_GRACE_MIN = 30                            # minutes a fresh rip stays unpinned (claim + language in the tonies app)
 COINS_STATE = f"{STORIE_DIR}/coins.json"     # coin UIDs whose teddycloud record we created
 LOG = f"{STORIE_DIR}/tc_sync.log"
 FFMPEG_IMG = "mwader/static-ffmpeg:latest"
@@ -609,6 +610,23 @@ def sync_media_and_chapters(storie, figs, recs):
                     os.remove(out)
                 except OSError:
                     pass
+        if not f.get("tc_source") and f.get("chapters_of") and f.get("chapters_of") != src:
+            # the box downloaded another version of this figurine (language change in the tonies app)
+            out = tempfile.mktemp(suffix=".opus")
+            try:
+                taf_to_opus(taf, out)
+                with open(out, "rb") as fh:
+                    docker_write(f"/app/media/{uid}.opus", fh.read(), container=COMPANION_CONTAINER)
+                f["file"] = f"{uid}.opus"
+                changed = True
+                log(f"figurine {uid}: phone audio rebuilt from {src} (box downloaded a new version)")
+            except Exception as e:
+                log(f"ERROR rebuilding phone audio for {uid}: {e}")
+            finally:
+                try:
+                    os.remove(out)
+                except OSError:
+                    pass
         if f.get("chapters_of") != src:
             f["chapters"] = taf_chapters(taf)
             f["chapters_of"] = src
@@ -730,6 +748,7 @@ def main():
 
     # ---- teddycloud -> storie (new rips) ---------------------------------------------
     enrolled = False
+    pin_pending = set()
     for uid, rec in recs.items():
         if uid in figs or not rec["taf"] or not rec["json"].get("cloud_ruid"):
             continue
@@ -749,16 +768,36 @@ def main():
             except OSError:
                 pass
         if not rec["json"].get("nocloud"):
+            pin_pending.add(uid)
+    if enrolled:
+        storie = json.load(open(STORIE_LIB))
+        figs = {f["uid"].upper(): f for f in storie["figurines"]}
+        for uid in pin_pending:
+            if uid in figs:
+                figs[uid]["pin_pending"] = True
+                lib_changed = True
+    # pin box rips once the grace period is over: until then the box's claim is forwarded to
+    # Boxine (the Tonie appears in the account) and a language can be picked in the tonies app.
+    # A pinned (nocloud) record makes teddycloud swallow the claim -> app shows codeword "Ant".
+    for uid, f in figs.items():
+        if not f.get("pin_pending"):
+            continue
+        rec = recs.get(uid)
+        if not rec or not rec["taf"]:
+            continue
+        if rec["json"].get("nocloud"):
+            f.pop("pin_pending", None)
+            lib_changed = True
+        elif time.time() - os.path.getmtime(rec["taf"]) > PIN_GRACE_MIN * 60:
             try:
                 c = dict(rec["json"])
                 c.update(nocloud=True, live=False, cloud_override=False, cache=True)
                 write_record(rec["dir"], rec["file"], c)
-                log(f"pinned {rec['dir']} -> {os.path.basename(rec['taf'])} (nocloud)")
+                log(f"pinned {rec['dir']} -> {os.path.basename(rec['taf'])} (nocloud, {PIN_GRACE_MIN} min after download)")
+                f.pop("pin_pending", None)
+                lib_changed = True
             except Exception as e:
                 log(f"ERROR pinning {rec['dir']}: {e}")
-    if enrolled:
-        storie = json.load(open(STORIE_LIB))
-        figs = {f["uid"].upper(): f for f in storie["figurines"]}
 
     # ---- records for coins / uploads / versions / skip seconds -----------------------
     if sync_records(storie, figs, recs):
