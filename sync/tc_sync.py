@@ -532,6 +532,9 @@ def sync_records(storie, figs, recs):
         model = None
         if kind == "coin" or f.get("tc_source"):
             model = f"storie-{(f.get('alias_of') if kind == 'coin' else uid).upper()}"
+            existing = (rec["json"].get("tonie_model") if rec else "") or ""
+            if existing and not existing.startswith("storie-"):
+                model = None      # a real catalogue model (e.g. a Creative Tonie) keeps its own picture
         if want:
             cur = rec["json"] if rec else {}
             if (cur.get("source") != want or not cur.get("nocloud") or int(cur.get("skip_seconds") or 0) != skip
