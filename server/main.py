@@ -69,6 +69,8 @@ LIBRARY_FILE = BASE / "library.json"
 STATE_FILE = BASE / "state" / "tc_state.json"
 APPS_DIR = BASE / "apps"          # storie.apk + storie.apk.json, published by scripts/publish_storie.ps1
 
+from roundcover import make_round
+
 app = FastAPI(title="Storie engine")
 
 
@@ -510,6 +512,13 @@ def cover(uid: str):
     if entry and entry.get("cover"):
         p = (MEDIA / entry["cover"]).resolve()
         if str(p).startswith(str(MEDIA.resolve())) and p.is_file():
+            if entry.get("kind") == "coin" and entry.get("alias_of"):
+                # coins show a round version of their story's cover, made on demand
+                r = MEDIA / f"{entry['alias_of']}_round.png"
+                if not r.is_file() or r.stat().st_mtime < p.stat().st_mtime:
+                    make_round(p, r)
+                if r.is_file():
+                    return FileResponse(r)
             return FileResponse(p)
     return Response(content=_PLACEHOLDER_PNG, media_type="image/png")
 

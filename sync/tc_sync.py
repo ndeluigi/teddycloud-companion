@@ -224,6 +224,17 @@ def storie_post(path, data=b"", headers=None):
     return urllib.request.urlopen(req, timeout=600).read()
 
 
+def storie_get(path):
+    req = urllib.request.Request(f"{storie_url()}{path}", headers={"X-Storie-Password": _storie_password()})
+    return urllib.request.urlopen(req, timeout=60).read()
+
+
+def coin_round(alias):
+    """File name of the round cover the server made for a story's coins (None if there is none yet)."""
+    name = f"{alias}_round.png"
+    return name if os.path.isfile(f"{STORIE_MEDIA}/{name}") else None
+
+
 def read_records():
     """teddycloud content records -> {uid: {dir, file, json, mtime, taf, audio_id, hash}}.
     The rUID is the directory name + json file name (records created by this job have an
@@ -553,7 +564,11 @@ def sync_records(storie, figs, recs):
         # coins and app-managed stories show the story's own tonies.custom.json entry in teddycloud
         model = None
         if kind == "coin" or f.get("tc_source"):
-            model = f"storie-{(f.get('alias_of') if kind == 'coin' else uid).upper()}"
+            if kind == "coin":
+                a = (f.get("alias_of") or "").upper()
+                model = f"storie-coin-{a}" if coin_round(a) else f"storie-{a}"
+            else:
+                model = f"storie-{uid}"
             existing = (rec["json"].get("tonie_model") if rec else "") or ""
             if existing and not existing.startswith("storie-"):
                 model = None      # a real catalogue model (e.g. a Creative Tonie) keeps its own picture
@@ -861,6 +876,25 @@ def main():
             c["tonie_model"] = model
             write_record(rec["dir"], rec["file"], c)
             log(f"set tonie_model={model} on {rec['dir']}")
+    # coins: same story, round picture (made by the server from the story's cover)
+    for a in sorted({(f.get("alias_of") or "").upper() for f in figs.values() if f.get("kind") == "coin"}):
+        story = next((e for e in custom if e["model"] == f"storie-{a}"), None)
+        cover = (figs.get(a) or {}).get("cover")
+        if not story or not cover or not os.path.isfile(f"{STORIE_MEDIA}/{cover}"):
+            continue
+        rnd = f"{STORIE_MEDIA}/{a}_round.png"
+        if not os.path.isfile(rnd) or os.path.getmtime(rnd) < os.path.getmtime(f"{STORIE_MEDIA}/{cover}"):
+            coin = next(u for u, f in figs.items() if f.get("kind") == "coin" and (f.get("alias_of") or "").upper() == a)
+            try:
+                storie_get(f"/cover/{coin}")
+            except Exception as e:
+                log(f"WARN round cover for {a}: {e}")
+        if not os.path.isfile(rnd):
+            continue
+        dst = f"{CUSTOM_IMG}/{a}_round.png"
+        if not os.path.isfile(dst) or os.path.getmtime(rnd) > os.path.getmtime(dst):
+            shutil.copy2(rnd, dst)
+        custom.append(dict(story, no=str(len(custom)), model=f"storie-coin-{a}", pic=f"/custom_img/{a}_round.png"))
     try:
         old = json.load(open(CUSTOM_JSON))
     except Exception:
