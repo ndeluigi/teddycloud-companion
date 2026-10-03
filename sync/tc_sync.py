@@ -268,11 +268,29 @@ def tonies_title(audio_id):
             if str(audio_id) in (t.get("audio_id") or []):
                 series, ep = t.get("series"), t.get("episodes")
                 if series and ep:
-                    return f"{series} - {ep}"
+                    return series if series == ep else f"{series} - {ep}"
                 title = t.get("title") or ""
                 return None if "None" in title or not title else title
     except Exception:
         pass
+    return None
+
+
+def tonies_cover(audio_id):
+    """(filename, bytes) of the catalogue picture for a known audio-id, else None."""
+    try:
+        for t in json.load(open(TONIES_JSON)):
+            if str(audio_id) in (t.get("audio_id") or []):
+                pic = t.get("pic") or ""
+                if not pic.startswith("http"):
+                    return None
+                ext = os.path.splitext(pic.split("?")[0])[1].lower()
+                if ext not in (".png", ".jpg", ".jpeg", ".webp"):
+                    ext = ".png"
+                req = urllib.request.Request(pic, headers={"User-Agent": "Mozilla/5.0"})
+                return f"cover{ext}", urllib.request.urlopen(req, timeout=30).read()
+    except Exception as e:
+        log(f"WARN catalogue picture for {audio_id}: {e}")
     return None
 
 
@@ -293,11 +311,15 @@ def taf_to_opus(taf, out):
         shutil.rmtree(work, ignore_errors=True)
 
 
-def enroll(uid, title, opus, needs_title):
+def enroll(uid, title, opus, needs_title, cover=None):
     boundary = uuid.uuid4().hex
     body = b""
     for k, v in (("uid", uid), ("title", title), ("needs_title", "1" if needs_title else "")):
         body += (f"--{boundary}\r\nContent-Disposition: form-data; name=\"{k}\"\r\n\r\n{v}\r\n").encode()
+    if cover:
+        body += (f"--{boundary}\r\nContent-Disposition: form-data; name=\"cover\"; "
+                 f"filename=\"{cover[0]}\"\r\nContent-Type: application/octet-stream\r\n\r\n").encode()
+        body += cover[1] + b"\r\n"
     body += (f"--{boundary}\r\nContent-Disposition: form-data; name=\"audio\"; "
              f"filename=\"{uid}.opus\"\r\nContent-Type: audio/ogg\r\n\r\n").encode()
     body += open(opus, "rb").read() + f"\r\n--{boundary}--\r\n".encode()
@@ -760,7 +782,8 @@ def main():
         out = tempfile.mktemp(suffix=".opus")
         try:
             taf_to_opus(rec["taf"], out)
-            r = enroll(uid, title, out, needs_title=not known)
+            r = enroll(uid, title, out, needs_title=not known,
+                       cover=tonies_cover(rec["audio_id"]) if known else None)
             log(f"enrolled {uid} in storie as '{r.get('title')}' from {os.path.basename(rec['taf'])}")
             enrolled = True
         except Exception as e:

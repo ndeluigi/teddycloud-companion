@@ -346,7 +346,8 @@ def load_library() -> int:
             }
             # coins: kind="coin", alias_of=<source uid>, tc_state="pending"|"ok"|"error: ..."
             for k in ("kind", "alias_of", "tc_state", "tc_source", "series", "created", "version",
-                      "chapters", "chapters_of", "media_of", "skip_seconds", "needs_title"):
+                      "chapters", "chapters_of", "media_of", "skip_seconds", "needs_title",
+                      "tc_written", "pin_pending"):     # bookkeeping of the sync job
                 if entry.get(k) is not None:
                     lib[uid][k] = entry[k]
     _library = lib
