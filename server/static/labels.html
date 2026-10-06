@@ -29,9 +29,18 @@
   .label .t { position:absolute; left:0; right:0; bottom:0; padding:1.2mm 5mm 3mm; background:rgba(255,255,255,.9); font-size:2.6mm; font-weight:700; text-align:center; line-height:1.15; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
   .label .e { font-size:calc(var(--d) * .45); }
   .empty { padding:40px; text-align:center; color:#6b7a82; }
+  .bar input[type=text] { font:inherit; padding:8px 12px; border-radius:10px; border:1px solid #d9e0e2; width:9em; }
+  .bar input.bad { border-color:#c0392b; background:#fdecea; }
+  .legend { flex-basis:100%; display:flex; flex-wrap:wrap; gap:6px; }
+  .legend button { font:inherit; font-size:13px; padding:4px 10px; border-radius:999px; border:1px solid #d9e0e2; background:#fff; color:#6b7a82; cursor:pointer; }
+  .legend button.on { background:var(--teal); border-color:var(--teal); color:#fff; }
+  .legend b { margin-right:4px; }
+  .pickmsg { color:#c0392b; font-size:13px; }
+  /* number of each label, on screen only */
+  .label .n { position:absolute; top:1.2mm; left:50%; transform:translateX(-50%); z-index:2; background:var(--teal); color:#fff; border-radius:999px; font:700 3mm/1 system-ui,sans-serif; padding:.7mm 1.8mm; box-shadow:0 0 0 .4mm #fff; }
   @page { size:A4; margin:0; }
   @media print {
-    .bar, .empty { display:none; } body { background:#fff; }
+    .bar, .empty, .label .n { display:none; } body { background:#fff; }
     html, body { height:auto; }
     .sheet { margin:0; box-shadow:none; break-after:page; height:290mm; }
     .sheet.free { height:auto; min-height:0; }
@@ -50,39 +59,79 @@
   <label id="sizeWrap" hidden>Diametro
     <select id="size"><option value="25mm">25 mm</option><option value="30mm" selected>30 mm</option><option value="35mm">35 mm</option><option value="40mm">40 mm</option></select>
   </label>
-  <label id="startWrap">Inizia dall'etichetta n.
+  <label>Quali etichette
+    <input type="text" id="pick" placeholder="1-3,5,7-10" inputmode="numeric" autocomplete="off">
+  </label>
+  <span class="pickmsg" id="pickMsg"></span>
+  <label id="startWrap">Inizia dalla posizione n.
     <input type="number" id="start" min="1" max="24" value="1">
   </label>
   <label><input type="checkbox" id="all"> Anche le statuine</label>
   <label><input type="checkbox" id="names"> Con il titolo</label>
   <button class="primary" id="print">Stampa</button>
-  <span class="hint" id="hintL">Stampa al 100% (dimensioni reali, senza adattamento alla pagina) e senza margini: le etichette cadono sui 24 cerchi del foglio. Se il foglio è già usato in parte, scegli da quale etichetta iniziare.</span>
+  <span class="hint">Vuoto = tutte. Tocca un titolo qui sotto per sceglierlo o toglierlo.</span>
+  <div class="legend" id="legend"></div>
+  <span class="hint" id="hintL">Stampa al 100% (dimensioni reali, senza adattamento alla pagina) e senza margini: le etichette cadono sui 24 cerchi del foglio. Se il foglio è già usato in parte, scegli da quale posizione iniziare.</span>
   <span class="hint" id="hintF" hidden>Stampa su carta adesiva (100%, senza adattamento alla pagina), ritaglia lungo il cerchio.</span>
 </div>
 <div id="sheets"></div>
 <p id="empty" class="empty" hidden>Nessun gettone collegato.</p>
-<script src="/static/i18n.js?v=12"></script>
+<script src="/static/i18n.js?v=13"></script>
 <script>
   const $ = (id) => document.getElementById(id);
   const esc = (s) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
   const PER_SHEET = 24;
   let items = [];
-  function labelHtml(f, d) {
+  function labelHtml(f, d, n) {
     const cls = f.kind === "coin" || f.on_coin || f.library ? "round" : "fig";
     const img = f.has_cover ? `<img class="${cls}" src="/cover/${f.uid}${f.on_coin ? "?shape=round" : ""}" alt="">` : `<span class="e">📖</span>`;
     const name = $("names").checked ? `<div class="t">${esc(f.title)}</div>` : "";
-    return `<div class="label" style="--d:${d}">${img}${name}</div>`;
+    return `<div class="label" style="--d:${d}" title="${n}. ${esc(f.title)}"><span class="n">${n}</span>${img}${name}</div>`;
+  }
+  // "1-3,5,7-10" -> set of numbers (null = all); tokens that are not numbers/ranges within 1..max go to bad
+  function parsePick(text, max) {
+    const set = new Set(), bad = [];
+    const toks = text.split(/[\s,;]+/).filter(Boolean);
+    if (!toks.length) return { set: null, bad };
+    for (const tok of toks) {
+      const m = tok.match(/^(\d+)(?:-(\d+))?$/);
+      if (!m) { bad.push(tok); continue; }
+      let a = +m[1], b = m[2] ? +m[2] : a;
+      if (a > b) [a, b] = [b, a];
+      if (a < 1 || b > max) { bad.push(tok); continue; }
+      for (let i = a; i <= b; i++) set.add(i);
+    }
+    return { set, bad };
+  }
+  // set of numbers -> "1-3,5,7-10"
+  function toRanges(nums) {
+    const s = [...nums].sort((x, y) => x - y), out = [];
+    for (let i = 0; i < s.length; i++) {
+      let j = i;
+      while (j + 1 < s.length && s[j + 1] === s[j] + 1) j++;
+      out.push(j > i ? `${s[i]}-${s[j]}` : `${s[i]}`); i = j;
+    }
+    return out.join(",");
+  }
+  function candidates() {
+    // coins, stories on a coin of their own, and library stories that have no coin yet (print first, link after)
+    return items.filter((f) => $("all").checked || f.kind === "coin" || f.on_coin
+      || (f.library && !items.some((c) => c.alias_of === f.uid)));
   }
   function render() {
     const paper = $("paper").value, fixed = paper === "l3415";
     $("sizeWrap").hidden = fixed; $("startWrap").hidden = !fixed;
     $("hintL").hidden = !fixed; $("hintF").hidden = fixed;
     const d = fixed ? "40mm" : $("size").value;
-    // coins, stories on a coin of their own, and library stories that have no coin yet (print first, link after)
-    const list = items.filter((f) => $("all").checked || f.kind === "coin" || f.on_coin
-      || (f.library && !items.some((c) => c.alias_of === f.uid)));
+    const all = candidates();
+    const { set, bad } = parsePick($("pick").value, all.length);
+    $("pick").classList.toggle("bad", bad.length > 0);
+    $("pickMsg").textContent = bad.length ? t("Non capisco: {x}", { x: bad.join(", ") }) : "";
+    $("legend").innerHTML = all.map((f, i) => `<button type="button" data-n="${i + 1}" class="${!set || set.has(i + 1) ? "on" : ""}"><b>${i + 1}</b>${esc(f.title)}</button>`).join("");
+    const list = all.map((f, i) => [f, i + 1]).filter(([, n]) => !set || set.has(n));
     $("empty").hidden = list.length > 0;
-    const cells = list.map((f) => labelHtml(f, d));
+    $("empty").textContent = all.length ? t("Nessuna etichetta scelta.") : t("Nessun gettone collegato.");
+    const cells = list.map(([f, n]) => labelHtml(f, d, n));
     let pages;
     if (fixed) {
       const skip = Math.min(PER_SHEET - 1, Math.max(0, (parseInt($("start").value, 10) || 1) - 1));
@@ -94,8 +143,17 @@
     }
     $("sheets").innerHTML = list.length ? pages.map((p) => `<div class="sheet ${paper}">${p}</div>`).join("") : "";
   }
+  // tap a title: add it to / remove it from the selection
+  $("legend").addEventListener("click", (ev) => {
+    const b = ev.target.closest("button[data-n]"); if (!b) return;
+    const max = candidates().length, n = +b.dataset.n;
+    const cur = parsePick($("pick").value, max).set || new Set(Array.from({ length: max }, (_, i) => i + 1));
+    cur.has(n) ? cur.delete(n) : cur.add(n);
+    $("pick").value = cur.size === max ? "" : toRanges(cur);
+    render();
+  });
   fetch("/library").then((r) => r.json()).then((d) => { items = d.figurines || []; render(); });
-  ["paper", "size", "start", "all", "names"].forEach((id) => $(id).addEventListener("input", render));
+  ["paper", "size", "start", "all", "names", "pick"].forEach((id) => $(id).addEventListener("input", render));
   $("print").addEventListener("click", () => window.print());
 </script>
 </body>
