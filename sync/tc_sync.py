@@ -38,6 +38,7 @@ removals / backup    : storie writes "removed" and "requests" into library.json;
 
 Idempotent; only writes when something changed. Log: COMPANION_DIR/tc_sync.log
 """
+import hashlib
 import json
 import os
 import re
@@ -47,6 +48,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import urllib.parse
 import urllib.request
 import uuid
 from datetime import datetime, timezone
@@ -328,6 +330,52 @@ def library_meta(source):
     return name, None
 
 
+def library_uid(source):
+    """Stable pseudo-UID of a library story (a story without a tag of its own). Real tag UIDs
+    start with E0, these with F0, so they can never collide."""
+    return "F0" + hashlib.sha1(source.lower().encode()).hexdigest()[:14].upper()
+
+
+def library_tafs():
+    """lib:// paths of the TAFs in the library root and in own folders - not the box's rips (by/),
+    the app's uploads (storie/) or folders starting with "_"."""
+    out = []
+    for root, dirs, files in os.walk(LIB):
+        rel = os.path.relpath(root, LIB).replace(os.sep, "/")
+        top = rel.split("/")[0]
+        if rel != "." and (top in ("by", "storie") or top.startswith("_")):
+            dirs[:] = []
+            continue
+        for fn in sorted(files):
+            if fn.lower().endswith(".taf"):
+                out.append("lib://" + (fn if rel == "." else f"{rel}/{fn}"))
+    return out
+
+
+def find_library_stories(storie, figs, recs):
+    """Named library TAFs that have no story yet -> [(pseudo uid, source, tags living on it)].
+    Skipped: files the app was told to forget (library_hidden), files written in the last 2 minutes
+    (still being copied), and files that belong to an original figurine (e.g. a Creative Tonie).
+    Stories that so far lived directly on a blank coin with that file are returned as tags: they
+    become coins of the new library story."""
+    hidden = set(storie.get("library_hidden") or [])
+    have = {f.get("tc_source") for f in figs.values() if f.get("library")}
+    todo = []
+    for src in library_tafs():
+        if src in hidden or src in have:
+            continue
+        title, _side = library_meta(src)
+        path = f"{LIB}/{src[6:]}"
+        if not title or not taf_header(path) or time.time() - os.path.getmtime(path) < 120:
+            continue
+        tags = [u for u, f in figs.items() if f.get("kind", "figurine") != "coin" and not f.get("library")
+                and ((recs.get(u) or {}).get("json", {}).get("source") == src or f.get("tc_source") == src)]
+        if any(not figs[u].get("on_coin") for u in tags):
+            continue
+        todo.append((library_uid(src), src, tags))
+    return todo
+
+
 def taf_to_opus(taf, out):
     work = tempfile.mkdtemp()
     try:
@@ -495,10 +543,20 @@ def download_status(state, figs, recs):
             elif d.get("downloaded") and d["downloaded"] >= rec["mtime"] - 5:
                 cur = True
         result[uid] = {"current": cur, "seen": d.get("reported") or d.get("downloaded")}
+    # a library story is on the box when one of its coins is
+    for uid, f in figs.items():
+        if f.get("library"):
+            coins = [c for c, cf in figs.items() if (cf.get("alias_of") or "").upper() == uid]
+            seen = [result[c]["seen"] for c in coins if result.get(c, {}).get("seen")]
+            result[uid] = {"current": any(result.get(c, {}).get("current") for c in coins),
+                           "seen": max(seen) if seen else None}
     return result
 
 
 # --------------------------------------------------------------------------- records
+figs_ref = {}     # storie entries of the current run, for adopt_manual
+
+
 def adopt_manual(uid, f, rec, recs, owner_of):
     """The record was re-pointed by hand in the teddycloud web UI (its source is a library file
     that is neither what storie wants nor what this job last wrote, see tc_written): make the
@@ -511,8 +569,9 @@ def adopt_manual(uid, f, rec, recs, owner_of):
     cur = rec["json"].get("source") or ""
     written = f.get("tc_written")
     if f.get("kind") == "coin":
+        lib = figs_ref.get((f.get("alias_of") or "").upper()) or {}
         a = recs.get((f.get("alias_of") or "").upper())
-        expect = a["json"].get("source") if a else None
+        expect = lib.get("tc_source") if lib.get("library") else (a["json"].get("source") if a else None)
     else:
         expect = f.get("tc_source")
     if not written or not expect or cur in (expect, written):
@@ -562,7 +621,12 @@ def sync_records(storie, figs, recs):
     # library file -> uid of the storie story whose record serves it
     owner_of = {r["json"].get("source"): u for u, r in recs.items()
                 if u in figs and figs[u].get("kind", "figurine") != "coin" and r["taf"]}
+    owner_of.update({f["tc_source"]: u for u, f in figs.items() if f.get("library") and f.get("tc_source")})
+    figs_ref.clear()
+    figs_ref.update(figs)
     for uid, f in figs.items():
+        if f.get("library"):                   # no tag of its own: nothing to write in teddycloud
+            continue
         rec = recs.get(uid)
         if adopt_manual(uid, f, rec, recs, owner_of):
             changed = True
@@ -572,8 +636,12 @@ def sync_records(storie, figs, recs):
         want = None
         new_state = None
         if kind == "coin":
+            lib = figs.get((f.get("alias_of") or "").upper()) or {}
             src = recs.get((f.get("alias_of") or "").upper())
-            if src and src["taf"]:
+            ls = lib.get("tc_source") or ""
+            if lib.get("library") and ls.startswith("lib://") and os.path.isfile(f"{LIB}/{ls[6:]}"):
+                want = ls
+            elif not lib.get("library") and src and src["taf"]:
                 want = src["json"]["source"]
             else:
                 new_state = "error: la storia non è ancora nella Toniebox"
@@ -672,6 +740,9 @@ def sync_media_and_chapters(storie, figs, recs):
         rec = recs.get(uid)
         taf = rec["taf"] if rec else None
         src = rec["json"]["source"] if rec else None
+        if f.get("library"):
+            src = f.get("tc_source") or ""
+            taf = f"{LIB}/{src[6:]}" if src.startswith("lib://") and os.path.isfile(f"{LIB}/{src[6:]}") else None
         if not taf:
             continue
         if (f.get("version") or "media_of" in f) and f.get("tc_source") and src == f["tc_source"] \
@@ -775,7 +846,8 @@ def process_removals(storie, figs, recs):
                 subprocess.run(["docker", "exec", TC_CONTAINER, "rm", "-rf",
                                 f"/teddycloud/data/content/default/{d}"], check=False)
         subprocess.run(["docker", "exec", TC_CONTAINER, "sh", "-c",
-                        f"rm -f /teddycloud/data/library/storie/{uid}-* /teddycloud/data/www/custom_img/{uid}_cover.*"],
+                        f"rm -f /teddycloud/data/library/storie/{uid}-* /teddycloud/data/www/custom_img/{uid}_cover.* "
+                        f"/teddycloud/data/www/custom_img/{uid}_round.png"],
                        check=False)
         created.discard(uid)
         log(f"removed {uid}: record and uploads deleted")
@@ -829,11 +901,58 @@ def main():
         write_storie_library(storie)
         recs = read_records()
 
+    # ---- teddycloud library -> storie (library stories, ready for coins) --------------
+    new_lib = find_library_stories(storie, figs, recs)
+    for luid, src, _tags in new_lib:
+        title, side = library_meta(src)
+        out = tempfile.mktemp(suffix=".opus")
+        try:
+            taf_to_opus(f"{LIB}/{src[6:]}", out)
+            enroll(luid, title, out, needs_title=False, cover=side)
+            log(f"library story {luid} '{title}' from {src}")
+        except Exception as e:
+            log(f"ERROR library story from {src}: {e}")
+        finally:
+            try:
+                os.remove(out)
+            except OSError:
+                pass
+    if new_lib:
+        storie = json.load(open(STORIE_LIB))
+        figs = {f["uid"].upper(): f for f in storie["figurines"]}
+        for luid, src, tags in new_lib:
+            f = figs.get(luid)
+            if not f:
+                continue
+            f.update(library=True, tc_source=src, tc_state="ok")
+            f.pop("needs_title", None)
+            for u in tags:                     # a story on a blank coin with this file -> coin of it
+                o = figs[u]
+                subprocess.run(["docker", "exec", COMPANION_CONTAINER, "sh", "-c",
+                                f"rm -f /app/media/{u}.* /app/media/{u}_cover.* /app/media/{u}_round.png"], check=False)
+                for k in ("file", "cover", "chapters", "chapters_of", "media_of", "tc_source", "needs_title",
+                          "on_coin", "version", "skip_seconds", "pin_pending"):
+                    o.pop(k, None)
+                o.update(kind="coin", alias_of=luid, title=f["title"], tc_state="ok", tc_written=src)
+                log(f"{u}: now a coin of library story {luid} '{f['title']}'")
+        lib_changed = True
+
     # ---- teddycloud -> storie (new rips) ---------------------------------------------
     enrolled = False
     pin_pending = set()
+    lib_src = {f["tc_source"]: u for u, f in figs.items() if f.get("library") and f.get("tc_source")}
     for uid, rec in recs.items():
         if uid in figs or not rec["taf"] or not rec["json"].get("cloud_ruid"):
+            continue
+        if (rec["json"].get("source") or "") in lib_src:
+            # a tag pointed at a library story's file (teddycloud web UI): it becomes a coin of it
+            try:
+                storie_post("/coin", urllib.parse.urlencode({"uid": uid, "source": lib_src[rec["json"]["source"]]}).encode(),
+                            {"Content-Type": "application/x-www-form-urlencoded"})
+                log(f"{uid}: set to {rec['json']['source']} in teddycloud -> coin of {lib_src[rec['json']['source']]}")
+                enrolled = True
+            except Exception as e:
+                log(f"ERROR linking {uid} as a coin: {e}")
             continue
         known = tonies_title(rec["audio_id"])
         named, side = (None, None) if known else library_meta(rec["json"].get("source") or "")
@@ -896,13 +1015,32 @@ def main():
     custom = []
     for n, (uid, f) in enumerate(sorted(figs.items())):
         rec = recs.get(uid)
-        if f.get("kind") == "coin" or not rec or not rec["taf"]:
+        if f.get("kind") == "coin":
+            continue
+        if f.get("library"):                    # library story: identify its TAF in teddycloud's library
+            ls = f.get("tc_source") or ""
+            taf = f"{LIB}/{ls[6:]}" if ls.startswith("lib://") else ""
+            info = taf_header(taf) if taf and os.path.isfile(taf) else None
+            if not info:
+                continue
+            audio_id, sha = info[0], info[1]
+        elif rec and rec["taf"]:
+            taf, audio_id, sha = rec["taf"], rec["audio_id"], rec["hash"]
+        else:
             continue
         title = f.get("title") or "Untitled"
         series = f.get("series") or "Storie"
         pic = ""
         cover = f.get("cover")
         if cover and os.path.isfile(f"{STORIE_MEDIA}/{cover}"):
+            if f.get("library"):                # round icon, made by the server
+                rnd = f"{STORIE_MEDIA}/{uid}_round.png"
+                if not os.path.isfile(rnd) or os.path.getmtime(rnd) < os.path.getmtime(f"{STORIE_MEDIA}/{cover}"):
+                    try:
+                        storie_get(f"/cover/{uid}")
+                    except Exception as e:
+                        log(f"WARN round cover for {uid}: {e}")
+                cover = f"{uid}_round.png" if os.path.isfile(rnd) else cover
             src, dst = f"{STORIE_MEDIA}/{cover}", f"{CUSTOM_IMG}/{cover}"
             if not os.path.isfile(dst) or os.path.getmtime(src) > os.path.getmtime(dst):
                 shutil.copy2(src, dst)
@@ -910,12 +1048,12 @@ def main():
         model = f"storie-{uid}"
         custom.append({
             "no": str(n), "model": model,
-            "audio_id": [str(rec["audio_id"])], "hash": [rec["hash"].upper()],
+            "audio_id": [str(audio_id)], "hash": [sha.upper()],
             "title": f"{series} - {title}", "series": series, "episodes": title, "tracks": [],
-            "release": str(int(os.path.getmtime(rec["taf"]))), "language": f.get("version") or LANG,
+            "release": str(int(os.path.getmtime(taf))), "language": f.get("version") or LANG,
             "category": "custom", "pic": pic,
         })
-        if rec["json"].get("tonie_model", "") == "":
+        if rec and rec["json"].get("tonie_model", "") == "":
             c = dict(rec["json"])
             c["tonie_model"] = model
             write_record(rec["dir"], rec["file"], c)

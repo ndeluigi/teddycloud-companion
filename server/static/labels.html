@@ -61,14 +61,14 @@
 </div>
 <div id="sheets"></div>
 <p id="empty" class="empty" hidden>Nessun gettone collegato.</p>
-<script src="/static/i18n.js?v=11"></script>
+<script src="/static/i18n.js?v=12"></script>
 <script>
   const $ = (id) => document.getElementById(id);
   const esc = (s) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
   const PER_SHEET = 24;
   let items = [];
   function labelHtml(f, d) {
-    const cls = f.kind === "coin" || f.on_coin ? "round" : "fig";
+    const cls = f.kind === "coin" || f.on_coin || f.library ? "round" : "fig";
     const img = f.has_cover ? `<img class="${cls}" src="/cover/${f.uid}${f.on_coin ? "?shape=round" : ""}" alt="">` : `<span class="e">📖</span>`;
     const name = $("names").checked ? `<div class="t">${esc(f.title)}</div>` : "";
     return `<div class="label" style="--d:${d}">${img}${name}</div>`;
@@ -78,7 +78,9 @@
     $("sizeWrap").hidden = fixed; $("startWrap").hidden = !fixed;
     $("hintL").hidden = !fixed; $("hintF").hidden = fixed;
     const d = fixed ? "40mm" : $("size").value;
-    const list = items.filter((f) => $("all").checked || f.kind === "coin" || f.on_coin);
+    // coins, stories on a coin of their own, and library stories that have no coin yet (print first, link after)
+    const list = items.filter((f) => $("all").checked || f.kind === "coin" || f.on_coin
+      || (f.library && !items.some((c) => c.alias_of === f.uid)));
     $("empty").hidden = list.length > 0;
     const cells = list.map((f) => labelHtml(f, d));
     let pages;

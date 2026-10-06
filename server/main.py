@@ -349,7 +349,7 @@ def load_library() -> int:
             # coins: kind="coin", alias_of=<source uid>, tc_state="pending"|"ok"|"error: ..."
             for k in ("kind", "alias_of", "tc_state", "tc_source", "series", "created", "version",
                       "chapters", "chapters_of", "media_of", "skip_seconds", "needs_title",
-                      "tc_written", "pin_pending", "on_coin"):     # bookkeeping of the sync job
+                      "tc_written", "pin_pending", "on_coin", "library"):     # bookkeeping of the sync job
                 if entry.get(k) is not None:
                     lib[uid][k] = entry[k]
     _library = lib
@@ -513,7 +513,7 @@ def cover(uid: str, shape: str = ""):
         p = (MEDIA / entry["cover"]).resolve()
         if str(p).startswith(str(MEDIA.resolve())) and p.is_file():
             coin = entry.get("kind") == "coin" and entry.get("alias_of")
-            if coin or shape == "round":
+            if coin or shape == "round" or entry.get("library"):     # library stories: round icon too
                 # coins show a round version of their story's cover, made on demand
                 # (?shape=round: the same for a story's own cover, e.g. a story living on a coin)
                 r = MEDIA / f"{entry['alias_of'] if coin else entry['uid']}_round.png"
@@ -558,6 +558,7 @@ def library(request: Request):
                 "has_cover": bool(e.get("cover")),
                 "kind": e.get("kind", "figurine"),
                 "on_coin": bool(e.get("on_coin")),
+                "library": bool(e.get("library")),
                 "alias_of": e.get("alias_of"),
                 "tc_state": e.get("tc_state"),
                 "chapters": e.get("chapters") or [],
@@ -625,6 +626,8 @@ async def story_remove(uid: str = Form(...)):
     if not e or e.get("kind") == "coin":
         raise HTTPException(status_code=404, detail="Storia non trovata.")
     gone = [u] + [c for c, ce in _library.items() if ce.get("alias_of") == u]
+    if e.get("library") and e.get("tc_source"):       # don't re-create it from the teddycloud library
+        _extra.setdefault("library_hidden", []).append(e["tc_source"])
     for g in gone:
         ent = _library.pop(g)
         if ent.get("kind") != "coin":

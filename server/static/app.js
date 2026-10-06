@@ -484,6 +484,7 @@ let editPoll = null;
 let coinUid = null;
 let coinPoll = null;
 const COIN_RE = /^E00403[0-9A-F]{10}$/;
+let coinPreset = null;     // library story chosen with "Collega un gettone": the next coin read is linked to it
 
 function coinStep(n) {
   [1, 2, 3].forEach((i) => {
@@ -492,7 +493,7 @@ function coinStep(n) {
   });
 }
 function coinReset() {
-  coinUid = null; nfcTarget = null;
+  coinUid = null; nfcTarget = null; coinPreset = null;
   clearInterval(coinPoll); coinPoll = null;
   $("coinStep1Msg").textContent = "";
   $("coinUidInput").value = "";
@@ -529,6 +530,7 @@ function coinGotUid(raw) {
   }
   coinUid = uid;
   $("coinUidShow").textContent = uid.replace(/(..)/g, "$1 ").trim();
+  if (coinPreset) { const s = coinPreset; coinPreset = null; coinAssign(s); return; }
   msg.textContent = known ? t("Il gettone racconta già «{t}»: scegli la nuova storia.", { t: known.title }) : "";
   const pick = $("coinPick");
   pick.innerHTML = "";
@@ -575,8 +577,15 @@ function renderCoins() {
   const box = $("coinList");
   // linked coins, plus stories that live on a blank coin of their own (on_coin)
   const coins = library.filter((f) => f.kind === "coin" || f.on_coin);
-  if (!coins.length) { box.innerHTML = `<p class="hint">${t("Nessun gettone collegato.")}</p>`; return; }
-  box.innerHTML = coins.map((c) => {
+  // library stories without a coin yet: ready to be linked
+  const ready = library.filter((f) => f.library && !library.some((c) => c.alias_of === f.uid));
+  if (!coins.length && !ready.length) { box.innerHTML = `<p class="hint">${t("Nessun gettone collegato.")}</p>`; return; }
+  box.innerHTML = ready.map((c) => `<div class="card coin-card" data-uid="${c.uid}"><div class="coin">
+      <div class="thumb">${artHtml(c, false)}</div>
+      <div style="flex:1;min-width:0"><div style="font-weight:700">${escapeHtml(c.title)}</div>
+        <div class="hint" style="margin-top:4px">${t("Pronta per un gettone: collega un gettone vuoto e stampa l'etichetta.")}</div>
+        <div class="actions"><button class="primary" data-act="link">${t("🪙 Collega un gettone")}</button>
+          <button class="ghost" data-act="play">${t("▶ Ascolta")}</button></div></div></div></div>`).join("") + coins.map((c) => {
     const st = c.tc_state === "ok" ? `<span class="badge ok">${t("Toniebox ✓")}</span>`
       : (c.tc_state || "").startsWith("error") ? `<span class="badge err">${escapeHtml(c.tc_state.slice(6).trim())}</span>`
       : `<span class="badge pending">${t("in attesa della Toniebox")}</span>`;
@@ -595,6 +604,11 @@ function renderCoins() {
     const uid = b.closest(".coin-card").dataset.uid;
     if (b.dataset.act === "play") { closeSheet(); playUid(uid); return; }
     if (b.dataset.act === "change") { coinGotUid(uid); window.scrollTo(0, 0); return; }
+    if (b.dataset.act === "link") {
+      coinPreset = library.find((x) => x.uid === uid); coinUid = null; coinStep(1);
+      $("coinStep1Msg").textContent = t("Avvicina un gettone vuoto: lo colleghiamo a «{t}».", { t: coinPreset.title });
+      window.scrollTo(0, 0); return;
+    }
     if (!confirm(t("Scollegare questo gettone? Sulla Toniebox smetterà di funzionare."))) return;
     const fd = new FormData(); fd.append("uid", uid);
     const r = await fetch("/coin/remove", { method: "POST", body: fd });
@@ -657,12 +671,12 @@ function renderTravel() {
   const box = $("travelList");
   const items = library;
   if (!items.length) { box.innerHTML = `<p class="hint">${t("Nessuna storia.")}</p>`; return; }
-  const missing = items.filter((f) => !f.downloaded).length;
+  const missing = items.filter((f) => !f.downloaded && !f.library).length;   // library stories count through their coins
   box.innerHTML = `<p style="font-weight:700">${missing ? t("⚠️ {n} da scaricare", { n: missing }) : t("✅ Tutto pronto: la Toniebox ha tutte le storie")}</p>` +
     items.map((f) => `<div class="card travel"><div class="thumb">${artHtml(f, false)}</div>
       <div style="flex:1;min-width:0"><div style="font-weight:700">${escapeHtml(f.title)}</div>
-        <div class="hint">${f.kind === "coin" ? t("gettone") : t("statuina")} · ${f.uid.replace(/(..)/g, "$1 ").trim()}</div></div>
-      <div style="display:grid;gap:6px;justify-items:end">${f.downloaded ? `<span class="badge ok">${t("✓ sulla box")}</span>` : `<span class="badge pending">${t("da appoggiare")}</span>`}
+        <div class="hint">${f.library ? t("storia per gettoni") : `${f.kind === "coin" ? t("gettone") : t("statuina")} · ${f.uid.replace(/(..)/g, "$1 ").trim()}`}</div></div>
+      <div style="display:grid;gap:6px;justify-items:end">${f.downloaded ? `<span class="badge ok">${t("✓ sulla box")}</span>` : f.library && !library.some((c) => c.alias_of === f.uid) ? `<span class="badge">${t("nessun gettone")}</span>` : `<span class="badge pending">${t("da appoggiare")}</span>`}
         ${f.kind === "coin" ? "" : offlineSet.has(f.uid) ? `<button class="ghost small" data-off-remove="${f.uid}">📱 ✓ ${t("sul telefono")}</button>` : offlineProgress[f.uid] !== undefined ? `<span class="badge pending">📱 ${offlineProgress[f.uid]}%</span>` : `<button class="ghost small" data-off-add="${f.uid}">📱 ${t("Scarica sul telefono")}</button>`}</div></div>`).join("");
   box.querySelectorAll("button[data-off-add]").forEach((b) => b.addEventListener("click", () => offlineAdd(b.dataset.offAdd)));
   box.querySelectorAll("button[data-off-remove]").forEach((b) => b.addEventListener("click", () => offlineRemove(b.dataset.offRemove)));
