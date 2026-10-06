@@ -573,19 +573,23 @@ function coinShowState(state) {
 }
 function renderCoins() {
   const box = $("coinList");
-  const coins = library.filter((f) => f.kind === "coin");
+  // linked coins, plus stories that live on a blank coin of their own (on_coin)
+  const coins = library.filter((f) => f.kind === "coin" || f.on_coin);
   if (!coins.length) { box.innerHTML = `<p class="hint">${t("Nessun gettone collegato.")}</p>`; return; }
   box.innerHTML = coins.map((c) => {
     const st = c.tc_state === "ok" ? `<span class="badge ok">${t("Toniebox ✓")}</span>`
       : (c.tc_state || "").startsWith("error") ? `<span class="badge err">${escapeHtml(c.tc_state.slice(6).trim())}</span>`
       : `<span class="badge pending">${t("in attesa della Toniebox")}</span>`;
+    const art = c.on_coin && c.has_cover ? `<img src="/cover/${c.uid}?shape=round" alt="" loading="lazy">` : artHtml(c, false);
+    const acts = c.on_coin ? `<div class="hint" style="margin-top:6px">${t("Storia propria di questo gettone")}</div>`
+      : `<button class="ghost" data-act="change">${t("Cambia storia")}</button>
+          <button class="ghost" data-act="remove">${t("Rimuovi")}</button>`;
     return `<div class="card coin-card" data-uid="${c.uid}"><div class="coin">
-      <div class="thumb">${artHtml(c, false)}</div>
+      <div class="thumb">${art}</div>
       <div style="flex:1;min-width:0"><div style="font-weight:700">${escapeHtml(c.title)}</div>
         <div class="uid">${c.uid.replace(/(..)/g, "$1 ").trim()}</div>${st}
         <div class="actions"><button class="ghost" data-act="play">${t("▶ Ascolta")}</button>
-          <button class="ghost" data-act="change">${t("Cambia storia")}</button>
-          <button class="ghost" data-act="remove">${t("Rimuovi")}</button></div></div></div></div>`;
+          ${acts}</div></div></div></div>`;
   }).join("");
   box.querySelectorAll("button[data-act]").forEach((b) => b.addEventListener("click", async () => {
     const uid = b.closest(".coin-card").dataset.uid;

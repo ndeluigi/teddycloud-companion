@@ -631,6 +631,17 @@ def sync_records(storie, figs, recs):
         if new_state and f.get("tc_state") != new_state:
             f["tc_state"] = new_state
             changed = True
+    # stories that live on a blank coin (no tonies authentication key) are listed with the coins
+    for uid, f in figs.items():
+        if f.get("kind") == "coin" or uid not in recs:
+            continue
+        blank = not (recs[uid]["json"].get("cloud_auth") or "").strip("0")
+        if bool(f.get("on_coin")) != blank:
+            if blank:
+                f["on_coin"] = True
+            else:
+                f.pop("on_coin", None)
+            changed = True
     # coins removed from storie: drop the record we created (or give an original tag its cloud back)
     for uid in sorted(created - set(figs)):
         d, fn = uid_to_dir(uid)

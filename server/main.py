@@ -349,7 +349,7 @@ def load_library() -> int:
             # coins: kind="coin", alias_of=<source uid>, tc_state="pending"|"ok"|"error: ..."
             for k in ("kind", "alias_of", "tc_state", "tc_source", "series", "created", "version",
                       "chapters", "chapters_of", "media_of", "skip_seconds", "needs_title",
-                      "tc_written", "pin_pending"):     # bookkeeping of the sync job
+                      "tc_written", "pin_pending", "on_coin"):     # bookkeeping of the sync job
                 if entry.get(k) is not None:
                     lib[uid][k] = entry[k]
     _library = lib
@@ -507,14 +507,16 @@ _PLACEHOLDER_PNG = bytes.fromhex(
 
 
 @app.get("/cover/{uid}")
-def cover(uid: str):
+def cover(uid: str, shape: str = ""):
     entry = find_entry(uid)
     if entry and entry.get("cover"):
         p = (MEDIA / entry["cover"]).resolve()
         if str(p).startswith(str(MEDIA.resolve())) and p.is_file():
-            if entry.get("kind") == "coin" and entry.get("alias_of"):
+            coin = entry.get("kind") == "coin" and entry.get("alias_of")
+            if coin or shape == "round":
                 # coins show a round version of their story's cover, made on demand
-                r = MEDIA / f"{entry['alias_of']}_round.png"
+                # (?shape=round: the same for a story's own cover, e.g. a story living on a coin)
+                r = MEDIA / f"{entry['alias_of'] if coin else entry['uid']}_round.png"
                 if not r.is_file() or r.stat().st_mtime < p.stat().st_mtime:
                     make_round(p, r)
                 if r.is_file():
@@ -555,6 +557,7 @@ def library(request: Request):
                 "cover_url": f"{base}/cover/{e['uid']}",
                 "has_cover": bool(e.get("cover")),
                 "kind": e.get("kind", "figurine"),
+                "on_coin": bool(e.get("on_coin")),
                 "alias_of": e.get("alias_of"),
                 "tc_state": e.get("tc_state"),
                 "chapters": e.get("chapters") or [],
