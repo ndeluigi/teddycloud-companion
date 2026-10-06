@@ -185,7 +185,8 @@ def taf_header(path):
 
 
 def taf_chapters(path):
-    """Start time (seconds) of each track, from the Ogg page granule positions."""
+    """Start time (seconds, 2 decimals) of each track: where its first Ogg page starts, i.e. the
+    granule position (end) of the page before it."""
     info = taf_header(path)
     if not info:
         return []
@@ -196,6 +197,7 @@ def taf_chapters(path):
         f.seek(4 + hl)
         audio = f.read()
     pos = 0
+    prev = 0
     while wanted:
         p = audio.find(b"OggS", pos)
         if p < 0:
@@ -203,8 +205,10 @@ def taf_chapters(path):
         gran = struct.unpack("<q", audio[p + 6:p + 14])[0]
         seq = struct.unpack("<I", audio[p + 18:p + 22])[0]
         if seq in wanted:
-            starts.append(max(0, gran // 48000))
+            starts.append(round(max(0, prev) / 48000, 2))
             wanted.discard(seq)
+        if gran >= 0:
+            prev = gran
         nseg = audio[p + 26]
         pos = p + 27 + nseg + sum(audio[p + 27:p + 27 + nseg])
     return sorted(starts)
@@ -344,7 +348,8 @@ def taf_to_opus(taf, out):
 def enroll(uid, title, opus, needs_title, cover=None):
     boundary = uuid.uuid4().hex
     body = b""
-    for k, v in (("uid", uid), ("title", title), ("needs_title", "1" if needs_title else "")):
+    for k, v in (("uid", uid), ("title", title), ("needs_title", "1" if needs_title else ""),
+                 ("from_teddycloud", "1")):
         body += (f"--{boundary}\r\nContent-Disposition: form-data; name=\"{k}\"\r\n\r\n{v}\r\n").encode()
     if cover:
         body += (f"--{boundary}\r\nContent-Disposition: form-data; name=\"cover\"; "

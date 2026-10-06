@@ -756,6 +756,7 @@ async def enroll(
     audio: UploadFile = File(...),
     cover: UploadFile | None = File(None),
     needs_title: str = Form(""),
+    from_teddycloud: str = Form(""),
 ):
     """Map a figurine UID to an uploaded audio file (and optional cover).
     Files are stored as media/<uid>.<ext> so re-enrolling overwrites cleanly."""
@@ -787,15 +788,14 @@ async def enroll(
     old = _library.get(u) or {}
     if old.get("kind") == "coin":
         raise HTTPException(status_code=409, detail="Questo codice è un gettone: scollegalo prima dai Gettoni.")
+    in_tc = needs_title == "1" or from_teddycloud == "1"     # enrolled by the sync: TAF already in teddycloud
     if needs_title == "1":
         entry["needs_title"] = True
-        entry["tc_state"] = "ok"          # rip coming from teddycloud: TAF already there
-    else:
-        entry["tc_state"] = "encoding"
+    entry["tc_state"] = "ok" if in_tc else "encoding"
     _library[u] = entry
     _unknown.pop(u, None)
     save_library()
-    if needs_title != "1":
+    if not in_tc:
         background.add_task(_tc_job, u, MEDIA / audio_name)
 
     base = str(request.base_url).rstrip("/")
