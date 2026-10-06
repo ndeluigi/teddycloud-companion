@@ -305,6 +305,25 @@ def tonies_cover(audio_id):
     return None
 
 
+def library_meta(source):
+    """(title, cover) for a library file with a real name, e.g. lib://La Strada e io.taf: the file
+    name is the title, a picture with the same name next to it is the cover ((filename, bytes)).
+    (None, None) for audio-id rips and the app's own uploads (<uid>-<timestamp>.taf)."""
+    if not source.startswith("lib://"):
+        return None, None
+    stem = os.path.splitext(f"{LIB}/{source[6:]}")[0]
+    name = os.path.basename(stem)
+    if name.isdigit() or re.fullmatch(r"[0-9A-Fa-f]{16}-\d+", name):
+        return None, None
+    for ext in (".png", ".jpg", ".jpeg", ".webp"):
+        if os.path.isfile(stem + ext):
+            try:
+                return name, (f"cover{ext}", open(stem + ext, "rb").read())
+            except OSError:
+                break
+    return name, None
+
+
 def taf_to_opus(taf, out):
     work = tempfile.mkdtemp()
     try:
@@ -507,6 +526,14 @@ def adopt_manual(uid, f, rec, recs, owner_of):
              file="", media_of="")
     for k in ("alias_of", "cover", "chapters", "chapters_of", "version", "needs_title"):
         f.pop(k, None)
+    _named, side = library_meta(cur)
+    if side:
+        try:
+            cover_name = f"{uid}_cover{os.path.splitext(side[0])[1]}"
+            docker_write(f"/app/media/{cover_name}", side[1], container=COMPANION_CONTAINER)
+            f["cover"] = cover_name
+        except Exception as e:
+            log(f"WARN cover for {uid}: {e}")
     if name.isdigit() and not known:
         f["needs_title"] = True
     log(f"{uid}: re-assigned in teddycloud to {cur} -> now the story '{title}'")
@@ -793,12 +820,13 @@ def main():
         if uid in figs or not rec["taf"] or not rec["json"].get("cloud_ruid"):
             continue
         known = tonies_title(rec["audio_id"])
-        title = known or f"Nuova storia {rec['audio_id']}"
+        named, side = (None, None) if known else library_meta(rec["json"].get("source") or "")
+        title = known or named or f"Nuova storia {rec['audio_id']}"
         out = tempfile.mktemp(suffix=".opus")
         try:
             taf_to_opus(rec["taf"], out)
-            r = enroll(uid, title, out, needs_title=not known,
-                       cover=tonies_cover(rec["audio_id"]) if known else None)
+            r = enroll(uid, title, out, needs_title=not (known or named),
+                       cover=tonies_cover(rec["audio_id"]) if known else side)
             log(f"enrolled {uid} in storie as '{r.get('title')}' from {os.path.basename(rec['taf'])}")
             enrolled = True
         except Exception as e:

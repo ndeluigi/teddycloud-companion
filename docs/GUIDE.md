@@ -34,6 +34,7 @@
 ### ➕ Adding stories
 
 - Menu → Add a story: upload an audio file (mp3, m4a, opus, wav…) or record with the microphone (🎙). You need the figurine's or coin's code and a title.
+- Already have a file in teddycloud? Put it in the library with a real name (e.g. “La Strada e io.taf”) and, if you like, a picture with the same name next to it (“La Strada e io.png”). Assign it to a coin in the teddycloud web UI: within a minute the app shows it with that title and cover.
 - The story plays on the phone right away; teddycloud prepares it for the Toniebox within a few minutes (badge: “preparing” → “waiting” → “Toniebox ✓”).
 
 ### ✏️ Stories (edit)
@@ -106,6 +107,7 @@
 ### ➕ Geschichten hinzufügen
 
 - Menü → Geschichte hinzufügen: eine Audiodatei hochladen (mp3, m4a, opus, wav…) oder mit dem Mikrofon aufnehmen (🎙). Nötig sind der Code der Figur oder Münze und ein Titel.
+- Schon eine Datei in teddycloud? Lege sie mit einem richtigen Namen in die Bibliothek (z. B. «La Strada e io.taf») und, wenn du willst, ein Bild mit demselben Namen daneben («La Strada e io.png»). Weise sie in der teddycloud-Oberfläche einer Münze zu: innerhalb einer Minute zeigt die App sie mit diesem Titel und Cover.
 - Die Geschichte spielt sofort auf dem Telefon; teddycloud bereitet sie in ein paar Minuten für die Toniebox vor (Hinweis: «Audio wird vorbereitet» → «wartet» → «Toniebox ✓»).
 
 ### ✏️ Geschichten (bearbeiten)
@@ -178,6 +180,7 @@
 ### ➕ Ajouter des histoires
 
 - Menu → Ajouter une histoire : envoie un fichier audio (mp3, m4a, opus, wav…) ou enregistre avec le micro (🎙). Il faut le code de la figurine ou du jeton et un titre.
+- Tu as déjà un fichier dans teddycloud ? Mets-le dans la bibliothèque avec un vrai nom (par exemple « La Strada e io.taf ») et, si tu veux, une image du même nom à côté (« La Strada e io.png »). Attribue-le à un jeton dans l'interface de teddycloud : en moins d'une minute l'app l'affiche avec ce titre et cette couverture.
 - L'histoire joue tout de suite sur le téléphone ; teddycloud la prépare pour la Toniebox en quelques minutes (badge : « je prépare l'audio » → « en attente » → « Toniebox ✓ »).
 
 ### ✏️ Histoires (modifier)
@@ -250,6 +253,7 @@
 ### ➕ Aggiungere storie
 
 - Menu → Aggiungi una storia: carica un file audio (mp3, m4a, opus, wav…) oppure registra con il microfono (🎙). Serve il codice della statuina o del gettone e un titolo.
+- Hai già un file in teddycloud? Mettilo nella libreria con un nome vero (per esempio «La Strada e io.taf») e, se vuoi, un'immagine con lo stesso nome accanto («La Strada e io.png»). Assegnalo a un gettone nell'interfaccia di teddycloud: entro un minuto l'app lo mostra con quel titolo e quella copertina.
 - La storia suona subito sul telefono; teddycloud la prepara per la Toniebox in qualche minuto (badge: «preparo l'audio» → «in attesa» → «Toniebox ✓»).
 
 ### ✏️ Storie (modifica)
